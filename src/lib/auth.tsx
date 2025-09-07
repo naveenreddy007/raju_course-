@@ -80,12 +80,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (data: RegisterData) => {
     try {
-      // Validate PAN if provided
-      if (data.referralCode && !validatePAN(data.referralCode)) {
-        return { error: 'Invalid PAN card format' }
-      }
-
-      // Sign up with Supabase Auth
+      console.log('Starting signup process...', { email: data.email, name: data.name, packageType: data.packageType })
+      
+      // Sign up with Supabase Auth first
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -97,9 +94,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       })
 
-      if (authError) return { error: authError.message }
-      if (!authData.user) return { error: 'Failed to create user' }
+      console.log('Supabase auth result:', { authData: !!authData.user, authError })
+      
+      if (authError) {
+        console.error('Supabase auth error:', authError)
+        return { error: authError.message }
+      }
+      
+      if (!authData.user) {
+        console.error('No user returned from Supabase')
+        return { error: 'Failed to create user account' }
+      }
 
+      console.log('Creating user profile via API...')
+      
       // Create user profile via API
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -114,14 +122,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
       })
 
+      console.log('API response status:', response.status)
+      
       if (!response.ok) {
-        const errorData = await response.json()
-        return { error: errorData.error || 'Failed to create profile' }
+        const errorText = await response.text()
+        console.error('API error response:', errorText)
+        
+        let errorData
+        try {
+          errorData = JSON.parse(errorText)
+        } catch {
+          errorData = { error: errorText }
+        }
+        
+        // If profile creation fails, try to delete the Supabase auth user
+        try {
+          await supabase.auth.admin.deleteUser(authData.user.id)
+        } catch (cleanupError) {
+          console.error('Failed to cleanup auth user:', cleanupError)
+        }
+        
+        return { error: errorData.error || 'Failed to create user profile' }
       }
-
-      return {}
+      
+      const result = await response.json()
+      console.log('User created successfully:', result)
+      
+      return { success: true, data: result }
     } catch (error) {
-      return { error: 'An unexpected error occurred' }
+      console.error('Unexpected error during signup:', error)
+      return { error: 'An unexpected error occurred during registration' }
     }
   }
 

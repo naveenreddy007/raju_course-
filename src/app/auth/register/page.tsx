@@ -74,6 +74,14 @@ export default function RegisterPage() {
     setLoading(true)
     setError('')
 
+    console.log('Form submission started with data:', {
+      email: formData.email,
+      name: formData.name,
+      packageType: formData.packageType,
+      phone: formData.phone,
+      hasReferralCode: !!formData.referralCode
+    })
+
     // Validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
@@ -93,19 +101,31 @@ export default function RegisterPage() {
       return
     }
 
+    if (!formData.name.trim()) {
+      setError('Please enter your full name')
+      setLoading(false)
+      return
+    }
+
     const result = await signUp({
       email: formData.email,
       password: formData.password,
-      name: formData.name,
+      name: formData.name.trim(),
       phone: formData.phone,
       referralCode: formData.referralCode,
       packageType: formData.packageType
     })
     
+    console.log('Signup result:', result)
+    
     if (result.error) {
       setError(result.error)
-    } else {
+    } else if (result.success) {
+      // Success - redirect to verification page
       router.push('/auth/verify-email')
+    } else {
+      // Fallback - redirect to dashboard if user is created but needs verification
+      router.push('/dashboard')
     }
     
     setLoading(false)
