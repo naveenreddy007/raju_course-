@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { generateReferralCode, packagePricing } from '@/lib/utils'
-import { PackageType } from '@/types'
+import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
+import { supabase } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
-    const { 
-      supabaseId, 
-      email, 
-      name, 
-      phone, 
-      referralCode, 
-      packageType 
+    const {
+      email,
+      name,
+      phone,
+      password,
+      referralCode
     } = await request.json()
 
-    if (!supabaseId || !email || !name || !packageType) {
+    if (!email || !name || !password) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { supabaseId }
+      where: { email: email.toLowerCase() }
     })
 
     if (existingUser) {
@@ -33,71 +33,120 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find parent affiliate if referral code provided
-    let parentAffiliate = null
+    // Validate referral code if provided
+    let referredById = null
     if (referralCode) {
-      parentAffiliate = await prisma.affiliate.findUnique({
-        where: { referralCode }
+      const parentAffiliate = await prisma.affiliate.findUnique({
+        where: { referralCode },
+        include: { user: true }
       })
+      
+      if (!parentAffiliate) {
+        return NextResponse.json(
+          { error: 'Invalid referral code' },
+          { status: 400 }
+        )
+      }
+      
+      referredById = parentAffiliate.userId
     }
 
-    // Start transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Create user
-      const user = await tx.user.create({
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12)
+
+    // Create user with Supabase Auth first
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
         data: {
-          supabaseId,
-          email,
           name,
-          phone,
-          emailVerified: false,
-          phoneVerified: false
+          phone
         }
-      })
-
-      // Generate unique referral code
-      let userReferralCode = generateReferralCode(name)
-      let attempts = 0
-      while (attempts < 5) {
-        const existing = await tx.affiliate.findUnique({
-          where: { referralCode: userReferralCode }
-        })
-        if (!existing) break
-        userReferralCode = generateReferralCode(name) + Math.floor(Math.random() * 99)
-        attempts++
       }
-
-      // Create affiliate profile
-      const affiliate = await tx.affiliate.create({
-        data: {
-          userId: user.id,
-          referralCode: userReferralCode,
-          parentId: parentAffiliate?.id,
-          packageType: packageType as PackageType,
-          packagePrice: packagePricing[packageType as PackageType].final,
-          purchaseDate: new Date()
-        }
-      })
-
-      // Create initial transaction for package purchase
-      const transaction = await tx.transaction.create({
-        data: {
-          userId: user.id,
-          amount: packagePricing[packageType as PackageType].final,
-          type: 'COURSE_PURCHASE',
-          status: 'PENDING',
-          description: `${packageType} package purchase`
-        }
-      })
-
-      return { user, affiliate, transaction }
     })
 
+    if (authError || !authData.user) {
+      return NextResponse.json(
+        { error: authError?.message || 'Failed to create auth account' },
+        { status: 500 }
+      )
+    }
+
+    // Create user record
+    const user = await prisma.user.create({
+      data: {
+        email: email.toLowerCase(),
+        name,
+        phone,
+        supabaseId: authData.user.id, // Use Supabase user ID
+        emailVerified: false,
+        phoneVerified: false,
+        isActive: true
+      }
+    })
+
+    // Create affiliate record for the new user
+    const userReferralCode = `USER${user.id.slice(-6).toUpperCase()}`
+    const affiliate = await prisma.affiliate.create({
+      data: {
+        userId: user.id,
+        referralCode: userReferralCode,
+        commissionRate: 0.10, // 10% default commission
+        totalDirectEarnings: 0,
+        totalIndirectEarnings: 0,
+        totalWithdrawn: 0,
+        currentBalance: 0,
+        packageType: 'SILVER', // Default package type
+        packagePrice: 0, // Will be updated when user purchases a package
+        purchaseDate: new Date(),
+        isActive: true,
+        ...(referredById && { parentId: referredById })
+      }
+    })
+
+    // Create referral record if referred by someone
+    if (referredById) {
+      const parentAffiliate = await prisma.affiliate.findUnique({
+        where: { userId: referredById }
+      })
+      
+      if (parentAffiliate) {
+        await prisma.referral.create({
+          data: {
+            affiliateId: parentAffiliate.id,
+            referredUserId: user.id
+          }
+        })
+      }
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        email: user.email,
+        role: user.role
+      },
+      process.env.JWT_SECRET || 'fallback-secret',
+      { expiresIn: '7d' }
+    )
+
+    // Return user data (without password)
+    const userData = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      referralCode: userReferralCode
+    }
+
     return NextResponse.json({
+      success: true,
       message: 'User created successfully',
-      userId: result.user.id,
-      affiliateId: result.affiliate.id,
-      transactionId: result.transaction.id
+      token,
+      user: userData,
+      hasReferralCode: !!referralCode
     })
 
   } catch (error) {

@@ -108,17 +108,51 @@ bun run dev
 
 ```env
 # Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
 
 # Database
-DATABASE_URL=your_database_url
-DIRECT_URL=your_direct_database_url
+DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.your-project-id.supabase.co:5432/postgres
+DIRECT_URL=postgresql://postgres:[YOUR-PASSWORD]@db.your-project-id.supabase.co:5432/postgres
 
 # App Configuration
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
+
+### 🔧 Fresh Supabase Setup
+
+This project includes a fresh Supabase integration setup for complete codebase indexing:
+
+1. **Clean Configuration**: All Supabase environment variables have been reset
+2. **Enhanced Client Setup**: Updated `src/lib/supabase.ts` with modern configuration
+3. **Documentation**: Complete setup guide in `supabase/README.md`
+4. **Migration Templates**: Database setup templates in `supabase/migrations/`
+
+**To set up your Supabase integration:**
+
+```bash
+# 1. Follow the setup guide
+cat supabase/README.md
+
+# 2. Configure your environment variables
+cp .env.example .env
+# Update .env with your Supabase credentials
+
+# 3. Test the connection
+node scripts/test-supabase.js
+
+# 4. Run database migrations
+npm run db:push
+```
+
+**Features included in the fresh setup:**
+- ✅ Modern Supabase client configuration with PKCE flow
+- ✅ Real-time subscriptions with optimized settings
+- ✅ Separate client and admin instances
+- ✅ Enhanced error handling and validation
+- ✅ TypeScript support with proper type definitions
+- ✅ Comprehensive documentation and examples
 
 ## 📱 Features
 

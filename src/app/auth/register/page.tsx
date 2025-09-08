@@ -1,39 +1,19 @@
 'use client'
 
-import React, { useState } from 'react'
+'use client'
+
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, Mail, Lock, User, Phone, UserPlus, Gift } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, User, Phone, UserPlus, Gift, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/lib/auth'
-import { PackageType } from '@/types'
-import { formatCurrency, packagePricing } from '@/lib/utils'
-
-const packages = [
-  {
-    type: 'SILVER' as PackageType,
-    name: 'Silver Package',
-    price: packagePricing.SILVER.final,
-    features: ['5 Premium Courses', 'Basic Analytics', 'Email Support']
-  },
-  {
-    type: 'GOLD' as PackageType,
-    name: 'Gold Package',
-    price: packagePricing.GOLD.final,
-    features: ['10 Premium Courses', 'Advanced Analytics', 'Priority Support', 'Monthly Webinars']
-  },
-  {
-    type: 'PLATINUM' as PackageType,
-    name: 'Platinum Package',
-    price: packagePricing.PLATINUM.final,
-    features: ['All 15+ Courses', 'Real-time Analytics', '24/7 VIP Support', 'Weekly 1-on-1 Sessions']
-  }
-]
+import { useToast } from '@/hooks/use-toast'
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -42,45 +22,70 @@ export default function RegisterPage() {
     confirmPassword: '',
     name: '',
     phone: '',
-    referralCode: '',
-    packageType: '' as PackageType
+    referralCode: ''
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [referralCodeValid, setReferralCodeValid] = useState<boolean | null>(null)
+  const [checkingReferral, setCheckingReferral] = useState(false)
 
   const { signUp } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { toast } = useToast()
 
-  // Pre-fill package from URL params
-  React.useEffect(() => {
-    const packageParam = searchParams.get('package')
-    if (packageParam) {
-      setFormData(prev => ({ 
-        ...prev, 
-        packageType: packageParam.toUpperCase() as PackageType 
-      }))
+  // Pre-fill referral code from URL params
+  useEffect(() => {
+    const refParam = searchParams.get('ref')
+    if (refParam) {
+      setFormData(prev => ({ ...prev, referralCode: refParam }))
+      validateReferralCode(refParam)
     }
   }, [searchParams])
 
+  const validateReferralCode = async (code: string) => {
+    if (!code.trim()) {
+      setReferralCodeValid(null)
+      return
+    }
+
+    setCheckingReferral(true)
+    try {
+      const response = await fetch('/api/auth/validate-referral', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referralCode: code })
+      })
+      
+      const data = await response.json()
+      setReferralCodeValid(data.valid)
+    } catch (error) {
+      setReferralCodeValid(false)
+    } finally {
+      setCheckingReferral(false)
+    }
+  }
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+    
+    // Validate referral code when it changes
+    if (field === 'referralCode') {
+      const timeoutId = setTimeout(() => {
+        validateReferralCode(value)
+      }, 500) // Debounce validation
+      
+      return () => clearTimeout(timeoutId)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-
-    console.log('Form submission started with data:', {
-      email: formData.email,
-      name: formData.name,
-      packageType: formData.packageType,
-      phone: formData.phone,
-      hasReferralCode: !!formData.referralCode
-    })
 
     // Validation
     if (formData.password !== formData.confirmPassword) {
@@ -95,14 +100,14 @@ export default function RegisterPage() {
       return
     }
 
-    if (!formData.packageType) {
-      setError('Please select a package')
+    if (!formData.name.trim()) {
+      setError('Please enter your full name')
       setLoading(false)
       return
     }
 
-    if (!formData.name.trim()) {
-      setError('Please enter your full name')
+    if (formData.referralCode && referralCodeValid === false) {
+      setError('Please enter a valid referral code or leave it empty')
       setLoading(false)
       return
     }
@@ -112,26 +117,20 @@ export default function RegisterPage() {
       password: formData.password,
       name: formData.name.trim(),
       phone: formData.phone,
-      referralCode: formData.referralCode,
-      packageType: formData.packageType
+      referralCode: formData.referralCode
     })
-    
-    console.log('Signup result:', result)
     
     if (result.error) {
       setError(result.error)
-    } else if (result.success) {
-      // Success - redirect to verification page
-      router.push('/auth/verify-email')
     } else {
-      // Fallback - redirect to dashboard if user is created but needs verification
-      router.push('/dashboard')
+      setShowSuccess(true)
+      setTimeout(() => {
+        router.push('/auth/verify-email')
+      }, 5000)
     }
     
     setLoading(false)
   }
-
-  const selectedPackage = packages.find(pkg => pkg.type === formData.packageType)
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
@@ -158,6 +157,43 @@ export default function RegisterPage() {
           </CardHeader>
 
           <CardContent>
+            {showSuccess && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mb-6 p-8 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl text-center shadow-lg"
+              >
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: "spring" }}
+                  >
+                    <Mail className="w-10 h-10 text-green-600" />
+                  </motion.div>
+                </div>
+                <h3 className="text-2xl font-bold text-green-800 mb-3">
+                  🎉 Account Created Successfully!
+                </h3>
+                <p className="text-green-700 text-base mb-4">
+                  We've sent a verification email to <strong>{formData.email}</strong>
+                </p>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-yellow-800">
+                    📧 <strong>Please check your email inbox</strong> (and spam folder) for the verification link to activate your account.
+                  </p>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-blue-800">
+                    🚀 <strong>Next Step:</strong> After verifying your email, you can login and purchase a learning package to start earning through our affiliate program.
+                  </p>
+                </div>
+                <p className="text-green-600 text-sm">
+                  Redirecting you to the email verification page in a few seconds...
+                </p>
+              </motion.div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
                 <motion.div
@@ -269,46 +305,6 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* Package Selection */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Choose Your Package</h3>
-                
-                <Select value={formData.packageType} onValueChange={(value) => handleInputChange('packageType', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a learning package" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {packages.map((pkg) => (
-                      <SelectItem key={pkg.type} value={pkg.type}>
-                        <div className="flex items-center justify-between w-full">
-                          <span>{pkg.name}</span>
-                          <span className="ml-2 font-semibold">{formatCurrency(pkg.price)}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {selectedPackage && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="p-4 bg-blue-50 rounded-lg border border-blue-200"
-                  >
-                    <h4 className="font-semibold text-blue-900 mb-2">{selectedPackage.name}</h4>
-                    <p className="text-2xl font-bold text-blue-600 mb-3">{formatCurrency(selectedPackage.price)}</p>
-                    <ul className="space-y-1">
-                      {selectedPackage.features.map((feature, index) => (
-                        <li key={index} className="text-sm text-blue-700 flex items-center">
-                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </motion.div>
-                )}
-              </div>
-
               {/* Referral Code */}
               <div className="space-y-2">
                 <Label htmlFor="referralCode">Referral Code (Optional)</Label>
@@ -316,25 +312,57 @@ export default function RegisterPage() {
                   <Gift className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
                     id="referralCode"
-                    placeholder="Enter referral code to earn bonus"
+                    placeholder="Enter referral code"
                     value={formData.referralCode}
                     onChange={(e) => handleInputChange('referralCode', e.target.value)}
-                    className="pl-10"
+                    className={`pl-10 pr-10 ${
+                      referralCodeValid === true 
+                        ? 'border-green-500 focus:border-green-500' 
+                        : referralCodeValid === false 
+                        ? 'border-red-500 focus:border-red-500' 
+                        : ''
+                    }`}
                   />
+                  {referralCodeValid === true && (
+                    <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 text-green-500 w-4 h-4" />
+                  )}
+                  {checkingReferral && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs text-gray-500">
-                  Have a referral code? Enter it to give your referrer a commission bonus!
-                </p>
+                {referralCodeValid === true && (
+                  <p className="text-xs text-green-600">
+                    ✅ Valid referral code! Your referrer will earn commission.
+                  </p>
+                )}
+                {referralCodeValid === false && (
+                  <p className="text-xs text-red-600">
+                    ❌ Invalid referral code. Please check and try again.
+                  </p>
+                )}
+                {!formData.referralCode && (
+                  <p className="text-xs text-gray-500">
+                    Have a referral code? Enter it to help your referrer earn commission!
+                  </p>
+                )}
               </div>
 
               <Button
                 type="submit"
                 className="w-full"
-                disabled={loading}
+                disabled={loading || checkingReferral}
                 size="lg"
               >
-                {loading ? 'Creating Account...' : 'Create Account & Continue to Payment'}
+                {loading ? 'Creating Account...' : 'Create Account'}
               </Button>
+              
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-800">
+                  📝 <strong>Next Step:</strong> After creating your account, you'll be able to purchase a learning package and start earning through our affiliate program.
+                </p>
+              </div>
             </form>
 
             <div className="mt-6 text-center">

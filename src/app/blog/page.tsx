@@ -32,93 +32,8 @@ const staggerChildren = {
   }
 }
 
-// Mock blog posts
-const blogPosts = [
-  {
-    id: 1,
-    title: 'How to Build a Successful Affiliate Marketing Business in 2024',
-    excerpt: 'Discover the proven strategies and techniques that top affiliate marketers use to generate consistent income online.',
-    content: 'Full article content here...',
-    featuredImage: '/api/placeholder/600/300',
-    author: 'Sarah Johnson',
-    publishedAt: '2024-01-15',
-    readTime: 8,
-    viewCount: 2847,
-    category: 'Affiliate Marketing',
-    tags: ['affiliate', 'marketing', 'business', 'online income'],
-    isPopular: true
-  },
-  {
-    id: 2,
-    title: 'The Ultimate Guide to Personal Finance and Wealth Building',
-    excerpt: 'Learn essential financial planning strategies that will help you build long-term wealth and achieve financial freedom.',
-    content: 'Full article content here...',
-    featuredImage: '/api/placeholder/600/300',
-    author: 'Michael Chen',
-    publishedAt: '2024-01-12',
-    readTime: 12,
-    viewCount: 1923,
-    category: 'Finance',
-    tags: ['finance', 'investment', 'wealth', 'planning'],
-    isPopular: false
-  },
-  {
-    id: 3,
-    title: 'Digital Marketing Trends That Will Dominate This Year',
-    excerpt: 'Stay ahead of the curve with these emerging digital marketing trends and strategies for business growth.',
-    content: 'Full article content here...',
-    featuredImage: '/api/placeholder/600/300',
-    author: 'Emma Rodriguez',
-    publishedAt: '2024-01-10',
-    readTime: 6,
-    viewCount: 3156,
-    category: 'Marketing',
-    tags: ['digital marketing', 'trends', 'strategy', 'growth'],
-    isPopular: true
-  },
-  {
-    id: 4,
-    title: 'Leadership Skills Every Entrepreneur Needs to Master',
-    excerpt: 'Develop the essential leadership qualities that separate successful entrepreneurs from the rest.',
-    content: 'Full article content here...',
-    featuredImage: '/api/placeholder/600/300',
-    author: 'David Thompson',
-    publishedAt: '2024-01-08',
-    readTime: 10,
-    viewCount: 1654,
-    category: 'Leadership',
-    tags: ['leadership', 'entrepreneur', 'skills', 'business'],
-    isPopular: false
-  },
-  {
-    id: 5,
-    title: 'Creating Engaging Content That Converts Visitors to Customers',
-    excerpt: 'Master the art of content creation and learn how to turn your audience into paying customers.',
-    content: 'Full article content here...',
-    featuredImage: '/api/placeholder/600/300',
-    author: 'Alex Kumar',
-    publishedAt: '2024-01-05',
-    readTime: 7,
-    viewCount: 2234,
-    category: 'Content Marketing',
-    tags: ['content', 'conversion', 'marketing', 'customers'],
-    isPopular: false
-  },
-  {
-    id: 6,
-    title: 'E-commerce Success: From Startup to Scale',
-    excerpt: 'Learn the step-by-step process to build and scale a profitable e-commerce business.',
-    content: 'Full article content here...',
-    featuredImage: '/api/placeholder/600/300',
-    author: 'Priya Sharma',
-    publishedAt: '2024-01-03',
-    readTime: 15,
-    viewCount: 1876,
-    category: 'E-commerce',
-    tags: ['ecommerce', 'business', 'startup', 'scale'],
-    isPopular: true
-  }
-]
+// Real blog posts - will be fetched from API
+const blogPosts = []
 
 const categories = ['All', 'Affiliate Marketing', 'Finance', 'Marketing', 'Leadership', 'Content Marketing', 'E-commerce']
 
@@ -149,7 +64,7 @@ export default function BlogPage() {
     })
   }
 
-  const featuredPost = blogPosts.find(post => post.isPopular) || blogPosts[0]
+  const featuredPost = null // No demo data - will be populated from real blog posts
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -167,56 +82,6 @@ export default function BlogPage() {
           Stay updated with the latest trends, strategies, and insights in affiliate marketing, finance, and business growth.
         </p>
       </motion.div>
-
-      {/* Featured Post */}
-      {featuredPost && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="mb-12"
-        >
-          <Card className="overflow-hidden hover:shadow-xl transition-shadow duration-300">
-            <div className="md:flex">
-              <div className="md:w-1/2">
-                <div className="h-64 md:h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                  <MessageSquare className="w-16 h-16 text-white/80" />
-                </div>
-              </div>
-              <div className="md:w-1/2 p-8">
-                <div className="flex items-center mb-4">
-                  <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium">
-                    Featured
-                  </span>
-                  <span className="ml-4 text-sm text-gray-500">{featuredPost.category}</span>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4 line-clamp-2">
-                  {featuredPost.title}
-                </h2>
-                <p className="text-gray-600 mb-6 line-clamp-3">
-                  {featuredPost.excerpt}
-                </p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center text-sm text-gray-500">
-                    <User className="w-4 h-4 mr-1" />
-                    <span className="mr-4">{featuredPost.author}</span>
-                    <Calendar className="w-4 h-4 mr-1" />
-                    <span className="mr-4">{formatDate(featuredPost.publishedAt)}</span>
-                    <Clock className="w-4 h-4 mr-1" />
-                    <span>{featuredPost.readTime} min read</span>
-                  </div>
-                  <Button asChild>
-                    <Link href={`/blog/${featuredPost.id}`}>
-                      Read More
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-      )}
 
       {/* Search and Filters */}
       <motion.div
@@ -355,7 +220,24 @@ export default function BlogPage() {
       </motion.div>
 
       {/* Empty State */}
-      {filteredPosts.length === 0 && (
+      {blogPosts.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-16"
+        >
+          <MessageSquare className="w-20 h-20 text-gray-400 mx-auto mb-6" />
+          <h3 className="text-2xl font-semibold text-gray-900 mb-3">Coming Soon!</h3>
+          <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            We're working on creating valuable content for you. Stay tuned for insightful articles on affiliate marketing, finance, and business growth.
+          </p>
+          <Button asChild>
+            <Link href="/dashboard">
+              Go to Dashboard
+            </Link>
+          </Button>
+        </motion.div>
+      ) : filteredPosts.length === 0 ? (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -375,7 +257,7 @@ export default function BlogPage() {
             Clear Filters
           </Button>
         </motion.div>
-      )}
+      ) : null}
 
       {/* Newsletter Subscription */}
       <motion.div

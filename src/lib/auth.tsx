@@ -9,7 +9,8 @@ import {
   LoginCredentials, 
   RegisterData, 
   KYCData,
-  PackageType 
+  PackageType,
+  UserRole 
 } from '@/types'
 import { generateReferralCode, validatePAN } from '@/lib/utils'
 
@@ -117,8 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: data.email,
           name: data.name,
           phone: data.phone,
-          referralCode: data.referralCode,
-          packageType: data.packageType
+          referralCode: data.referralCode
         })
       })
 
@@ -195,6 +195,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const isAdmin = () => {
+    return user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN
+  }
+
+  const isSuperAdmin = () => {
+    return user?.role === UserRole.SUPER_ADMIN
+  }
+
   const value: AuthContextType = {
     user,
     loading,
@@ -202,7 +210,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     updateKYC,
-    refreshUser
+    refreshUser,
+    isAdmin,
+    isSuperAdmin
   }
 
   return (

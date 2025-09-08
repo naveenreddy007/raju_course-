@@ -5,6 +5,8 @@ export interface User {
   phone?: string
   name: string
   avatar?: string
+  role: UserRole
+  isActive: boolean
   panCard?: string
   aadharCard?: string
   kycStatus: KYCStatus
@@ -98,7 +100,35 @@ export interface Enrollment {
   updatedAt: string
 }
 
+export interface WithdrawalRequest {
+  id: string
+  userId: string
+  amount: number
+  bankDetailId?: string
+  status: WithdrawalStatus
+  adminNotes?: string
+  processedById?: string
+  processedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
 // Enums
+export enum UserRole {
+  USER = 'USER',
+  ADMIN = 'ADMIN',
+  SUPER_ADMIN = 'SUPER_ADMIN'
+}
+
+export enum WithdrawalStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  PROCESSING = 'PROCESSING',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED'
+}
+
 export enum KYCStatus {
   PENDING = 'PENDING',
   SUBMITTED = 'SUBMITTED',
@@ -179,7 +209,6 @@ export interface RegisterData {
   name: string
   phone?: string
   referralCode?: string
-  packageType: PackageType
 }
 
 export interface KYCData {
@@ -196,4 +225,6 @@ export interface AuthContextType {
   signOut: () => Promise<void>
   updateKYC: (data: KYCData) => Promise<{ error?: string }>
   refreshUser: () => Promise<void>
+  isAdmin: () => boolean
+  isSuperAdmin: () => boolean
 }

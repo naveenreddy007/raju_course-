@@ -19,6 +19,10 @@ model User {
   name              String
   avatar            String?
   
+  // Role and Permissions
+  role              UserRole @default(USER)
+  isActive          Boolean  @default(true)
+  
   // KYC Information
   panCard           String?  @unique
   aadharCard        String?
@@ -45,6 +49,8 @@ model User {
   subscriptions     NewsletterSubscription[]
   blogPosts         BlogPost[]
   referrals         Referral[] @relation("ReferredUser")
+  withdrawalRequests WithdrawalRequest[]
+  processedWithdrawals WithdrawalRequest[] @relation("ProcessedWithdrawals")
   
   @@map("users")
 }
@@ -64,6 +70,9 @@ model Affiliate {
   packageType     PackageType
   packagePrice    Float
   purchaseDate    DateTime
+  
+  // Commission Information
+  commissionRate  Float @default(0.10)
   
   // Commission Stats
   totalDirectEarnings    Float @default(0)
@@ -333,6 +342,9 @@ model BankDetail {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
+  // Relations
+  withdrawalRequests WithdrawalRequest[]
+  
   @@map("bank_details")
 }
 
@@ -358,7 +370,46 @@ model Notification {
   @@map("notifications")
 }
 
+// Withdrawal Request System
+model WithdrawalRequest {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  
+  amount          Float
+  bankDetailId    String?
+  bankDetail      BankDetail? @relation(fields: [bankDetailId], references: [id])
+  
+  status          WithdrawalStatus @default(PENDING)
+  adminNotes      String?
+  
+  // Admin who processed
+  processedById   String?
+  processedBy     User?    @relation("ProcessedWithdrawals", fields: [processedById], references: [id])
+  processedAt     DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("withdrawal_requests")
+}
+
 // Enums
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
 enum KYCStatus {
   PENDING
   SUBMITTED

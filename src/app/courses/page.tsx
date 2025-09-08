@@ -35,111 +35,8 @@ const staggerChildren = {
   }
 }
 
-// Mock course data
-const courses = [
-  {
-    id: 1,
-    title: 'Digital Marketing Mastery',
-    description: 'Learn comprehensive digital marketing strategies including SEO, social media, and paid advertising.',
-    shortDescription: 'Complete digital marketing course',
-    thumbnailUrl: '/api/placeholder/400/250',
-    duration: 480, // 8 hours
-    price: 0, // Included in package
-    rating: 4.8,
-    studentsCount: 2847,
-    packageTypes: ['SILVER', 'GOLD', 'PLATINUM'] as PackageType[],
-    level: 'Beginner',
-    category: 'Marketing',
-    instructor: 'Sarah Johnson',
-    modules: 12,
-    isPopular: true
-  },
-  {
-    id: 2,
-    title: 'Advanced Sales Techniques',
-    description: 'Master the art of selling with proven techniques used by top sales professionals worldwide.',
-    shortDescription: 'Professional sales training',
-    thumbnailUrl: '/api/placeholder/400/250',
-    duration: 360, // 6 hours
-    price: 0,
-    rating: 4.9,
-    studentsCount: 1923,
-    packageTypes: ['GOLD', 'PLATINUM'] as PackageType[],
-    level: 'Intermediate',
-    category: 'Sales',
-    instructor: 'Michael Chen',
-    modules: 10,
-    isPopular: false
-  },
-  {
-    id: 3,
-    title: 'Financial Planning & Investment',
-    description: 'Learn how to manage your finances, invest wisely, and build long-term wealth.',
-    shortDescription: 'Personal finance mastery',
-    thumbnailUrl: '/api/placeholder/400/250',
-    duration: 540, // 9 hours
-    price: 0,
-    rating: 4.7,
-    studentsCount: 3156,
-    packageTypes: ['SILVER', 'GOLD', 'PLATINUM'] as PackageType[],
-    level: 'Beginner',
-    category: 'Finance',
-    instructor: 'David Rodriguez',
-    modules: 15,
-    isPopular: true
-  },
-  {
-    id: 4,
-    title: 'Leadership & Team Management',
-    description: 'Develop essential leadership skills and learn how to manage high-performing teams.',
-    shortDescription: 'Executive leadership training',
-    thumbnailUrl: '/api/placeholder/400/250',
-    duration: 420, // 7 hours
-    price: 0,
-    rating: 4.6,
-    studentsCount: 1654,
-    packageTypes: ['PLATINUM'] as PackageType[],
-    level: 'Advanced',
-    category: 'Leadership',
-    instructor: 'Emma Thompson',
-    modules: 8,
-    isPopular: false
-  },
-  {
-    id: 5,
-    title: 'Content Creation & Social Media',
-    description: 'Create engaging content and build a strong social media presence for your brand.',
-    shortDescription: 'Content & social media strategy',
-    thumbnailUrl: '/api/placeholder/400/250',
-    duration: 300, // 5 hours
-    price: 0,
-    rating: 4.5,
-    studentsCount: 2234,
-    packageTypes: ['GOLD', 'PLATINUM'] as PackageType[],
-    level: 'Beginner',
-    category: 'Marketing',
-    instructor: 'Alex Kumar',
-    modules: 9,
-    isPopular: false
-  },
-  {
-    id: 6,
-    title: 'E-commerce Business Setup',
-    description: 'Learn how to start and scale a successful e-commerce business from scratch.',
-    shortDescription: 'Complete e-commerce guide',
-    thumbnailUrl: '/api/placeholder/400/250',
-    duration: 600, // 10 hours
-    price: 0,
-    rating: 4.8,
-    studentsCount: 1876,
-    packageTypes: ['PLATINUM'] as PackageType[],
-    level: 'Intermediate',
-    category: 'Business',
-    instructor: 'Priya Sharma',
-    modules: 14,
-    isPopular: true
-  }
-]
+// Real courses - will be fetched from API
+const courses = []
 
 const categories = ['All', 'Marketing', 'Sales', 'Finance', 'Leadership', 'Business']
 const levels = ['All', 'Beginner', 'Intermediate', 'Advanced']
@@ -348,19 +245,10 @@ export default function CoursesPage() {
           className="text-center py-12"
         >
           <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No courses found</h3>
-          <p className="text-gray-600 mb-4">Try adjusting your search or filter criteria</p>
-          <Button 
-            variant="outline" 
-            onClick={() => {
-              setSearchTerm('')
-              setSelectedCategory('All')
-              setSelectedLevel('All')
-              setSelectedPackage('All')
-            }}
-          >
-            Clear Filters
-          </Button>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">No courses available yet</h3>
+          <p className="text-gray-600 mb-4">
+            Courses will be added soon. Check back later for premium learning content!
+          </p>
         </motion.div>
       )}
     </div>

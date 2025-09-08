@@ -1,6 +1,7 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { 
   TrendingUp, 
@@ -31,8 +32,31 @@ const staggerChildren = {
 
 export default function DashboardPage() {
   const { user, loading } = useAuth()
+  const [dashboardData, setDashboardData] = useState(null)
+  const [dataLoading, setDataLoading] = useState(true)
 
-  if (loading) {
+  useEffect(() => {
+    if (user && !loading) {
+      fetchDashboardData()
+    }
+  }, [user, loading])
+
+  const fetchDashboardData = async () => {
+    try {
+      const response = await fetch('/api/dashboard/stats')
+      const data = await response.json()
+
+      if (data.success) {
+        setDashboardData(data)
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+    } finally {
+      setDataLoading(false)
+    }
+  }
+
+  if (loading || dataLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
@@ -51,40 +75,19 @@ export default function DashboardPage() {
     )
   }
 
-  // Mock data - replace with real data from API
-  const stats = {
-    totalEarnings: 15750,
-    directEarnings: 12500,
-    indirectEarnings: 3250,
-    totalReferrals: 8,
-    activeReferrals: 6,
-    coursesCompleted: 3,
-    currentBalance: 15750
+  // Use real data from API or fallback to basic stats
+  const stats = dashboardData?.stats || {
+    totalEarnings: (user?.affiliate?.totalDirectEarnings || 0) + (user?.affiliate?.totalIndirectEarnings || 0),
+    directEarnings: user?.affiliate?.totalDirectEarnings || 0,
+    indirectEarnings: user?.affiliate?.totalIndirectEarnings || 0,
+    totalReferrals: 0,
+    activeReferrals: 0,
+    coursesCompleted: 0,
+    currentBalance: user?.affiliate?.currentBalance || 0
   }
 
-  const recentActivities = [
-    {
-      id: 1,
-      type: 'commission',
-      description: 'Commission earned from John Doe',
-      amount: 2375,
-      date: '2 hours ago'
-    },
-    {
-      id: 2,
-      type: 'referral',
-      description: 'New referral: Jane Smith joined',
-      amount: 0,
-      date: '1 day ago'
-    },
-    {
-      id: 3,
-      type: 'course',
-      description: 'Completed: Advanced Marketing Course',
-      amount: 0,
-      date: '3 days ago'
-    }
-  ]
+  // Use real activities from API
+  const recentActivities = dashboardData?.recentActivities || []
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -118,7 +121,7 @@ export default function DashboardPage() {
               <CardContent>
                 <div className="text-2xl font-bold">{formatCurrency(stats.totalEarnings)}</div>
                 <p className="text-xs text-muted-foreground">
-                  +20.1% from last month
+                  {stats.totalEarnings > 0 ? '+' : ''}0% from last month
                 </p>
               </CardContent>
             </Card>
@@ -182,30 +185,42 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentActivities.map((activity) => (
-                    <div key={activity.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                          activity.type === 'commission' ? 'bg-green-100 text-green-600' :
-                          activity.type === 'referral' ? 'bg-blue-100 text-blue-600' :
-                          'bg-purple-100 text-purple-600'
-                        }`}>
-                          {activity.type === 'commission' ? <IndianRupee className="w-4 h-4" /> :
-                           activity.type === 'referral' ? <Users className="w-4 h-4" /> :
-                           <Award className="w-4 h-4" />}
+                  {recentActivities.length > 0 ? (
+                    recentActivities.map((activity) => (
+                      <div key={activity.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            activity.type === 'commission' ? 'bg-green-100 text-green-600' :
+                            activity.type === 'referral' ? 'bg-blue-100 text-blue-600' :
+                            'bg-purple-100 text-purple-600'
+                          }`}>
+                            {activity.type === 'commission' ? <IndianRupee className="w-4 h-4" /> :
+                             activity.type === 'referral' ? <Users className="w-4 h-4" /> :
+                             <Award className="w-4 h-4" />}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{activity.description}</p>
+                            <p className="text-xs text-gray-500">{activity.date}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium">{activity.description}</p>
-                          <p className="text-xs text-gray-500">{activity.date}</p>
-                        </div>
+                        {activity.amount > 0 && (
+                          <span className="text-sm font-semibold text-green-600">
+                            +{formatCurrency(activity.amount)}
+                          </span>
+                        )}
                       </div>
-                      {activity.amount > 0 && (
-                        <span className="text-sm font-semibold text-green-600">
-                          +{formatCurrency(activity.amount)}
-                        </span>
-                      )}
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <TrendingUp className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <p className="text-sm">No activity yet</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Start referring friends to see your earnings here!
+                      </p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -222,21 +237,29 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <Button className="w-full justify-start" variant="outline">
-                    <Eye className="w-4 h-4 mr-2" />
-                    View Referral Link
+                  <Button asChild className="w-full justify-start" variant="outline">
+                    <Link href="/dashboard/referrals">
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Referral Link
+                    </Link>
                   </Button>
-                  <Button className="w-full justify-start" variant="outline">
-                    <TrendingUp className="w-4 h-4 mr-2" />
-                    Check Commission Details
+                  <Button asChild className="w-full justify-start" variant="outline">
+                    <Link href="/dashboard/earnings">
+                      <TrendingUp className="w-4 h-4 mr-2" />
+                      Check Commission Details
+                    </Link>
                   </Button>
-                  <Button className="w-full justify-start" variant="outline">
-                    <BookOpen className="w-4 h-4 mr-2" />
-                    Continue Learning
+                  <Button asChild className="w-full justify-start" variant="outline">
+                    <Link href="/dashboard/courses">
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      Continue Learning
+                    </Link>
                   </Button>
-                  <Button className="w-full justify-start" variant="outline">
-                    <IndianRupee className="w-4 h-4 mr-2" />
-                    Request Withdrawal
+                  <Button asChild className="w-full justify-start" variant="outline">
+                    <Link href="/dashboard/earnings">
+                      <IndianRupee className="w-4 h-4 mr-2" />
+                      Request Withdrawal
+                    </Link>
                   </Button>
                 </div>
               </CardContent>
