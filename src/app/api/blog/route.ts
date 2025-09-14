@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     
     // Build where clause
     const where: any = {
-      published: published
+      isPublished: published
     };
     
     if (search) {
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       prisma.blogPost.findMany({
         where,
         include: {
-          users: {
+          author: {
             select: {
               id: true,
               name: true,
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       content,
       excerpt,
       featuredImage,
-      published,
+      isPublished,
       authorId
     } = body;
     
@@ -126,9 +126,9 @@ export async function POST(request: NextRequest) {
         content,
         excerpt: finalExcerpt,
         featuredImage,
-        published: published || false,
+        isPublished: isPublished || false,
         authorId,
-        publishedAt: published ? new Date() : null
+        publishedAt: isPublished ? new Date() : null
       }
     });
     

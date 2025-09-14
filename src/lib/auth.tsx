@@ -73,6 +73,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signInWithPassword(credentials)
       if (error) return { error: error.message }
+
+      // Wait for user data to be loaded before returning success
+      let attempts = 0
+      while (!user && attempts < 10) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+        attempts++
+      }
+
       return {}
     } catch (error) {
       return { error: 'An unexpected error occurred' }

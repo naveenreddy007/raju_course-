@@ -1,0 +1,81 @@
+{
+  "testSuite": "Course Management Tests",
+  "executionTime": "2025-09-14T08:49:37.544Z",
+  "totalTests": 10,
+  "passed": 3,
+  "failed": 6,
+  "skipped": 1,
+  "errors": 0,
+  "results": [
+    {
+      "testId": "COURSE-001",
+      "testName": "Course Catalog API",
+      "status": "PASSED",
+      "details": "Retrieved 3 courses",
+      "timestamp": "2025-09-14T08:49:29.088Z"
+    },
+    {
+      "testId": "COURSE-002",
+      "testName": "Course Details API",
+      "status": "FAILED",
+      "details": "Status: 404",
+      "timestamp": "2025-09-14T08:49:30.099Z"
+    },
+    {
+      "testId": "COURSE-003",
+      "testName": "Course Page Accessibility",
+      "status": "PASSED",
+      "details": "Course page loads with expected content",
+      "timestamp": "2025-09-14T08:49:31.794Z"
+    },
+    {
+      "testId": "PURCHASE-001",
+      "testName": "Course Enrollment API",
+      "status": "FAILED",
+      "details": "Status: 400, Response: {\"error\":\"Validation failed\",\"details\":\"Required, Required, Required\"}",
+      "timestamp": "2025-09-14T08:49:32.171Z"
+    },
+    {
+      "testId": "PURCHASE-002",
+      "testName": "Enrollment Status Check API",
+      "status": "FAILED",
+      "details": "Status: 401",
+      "timestamp": "2025-09-14T08:49:32.824Z"
+    },
+    {
+      "testId": "PURCHASE-003",
+      "testName": "User Dashboard Courses API",
+      "status": "FAILED",
+      "details": "Status: 500",
+      "timestamp": "2025-09-14T08:49:33.229Z"
+    },
+    {
+      "testId": "PURCHASE-004",
+      "testName": "Course Purchase Workflow Page",
+      "status": "PASSED",
+      "details": "Purchase workflow page accessible",
+      "timestamp": "2025-09-14T08:49:35.210Z"
+    },
+    {
+      "testId": "PROGRESS-001",
+      "testName": "Course Progress API",
+      "status": "FAILED",
+      "details": "Status: 401",
+      "timestamp": "2025-09-14T08:49:35.893Z"
+    },
+    {
+      "testId": "PROGRESS-002",
+      "testName": "Module Progress Update API",
+      "status": "SKIPPED",
+      "details": "Could not get course details",
+      "timestamp": "2025-09-14T08:49:37.085Z"
+    },
+    {
+      "testId": "PROGRESS-003",
+      "testName": "Progress Tracking Page",
+      "status": "FAILED",
+      "details": "Progress tracking page missing expected elements",
+      "timestamp": "2025-09-14T08:49:37.544Z"
+    }
+  ]
+}

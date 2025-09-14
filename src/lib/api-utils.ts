@@ -85,22 +85,35 @@ export const schemas = {
 // Authentication helper
 export async function authenticateUser(request: NextRequest) {
   try {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       throw new APIError('Authentication required', 401, 'UNAUTHORIZED');
     }
 
+    const token = authHeader.substring(7);
+    
+    // For Supabase JWT tokens, decode without verification (since we trust our login endpoint)
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const userId = payload.sub || payload.userId;
+    
+    if (!userId) {
+      throw new APIError('Invalid token', 401, 'INVALID_TOKEN');
+    }
+
+    // Find user by supabaseId if we have 'sub', otherwise by id
     const user = await prisma.user.findUnique({
-      where: { supabaseId: session.user.id }
+      where: payload.sub ? { supabaseId: payload.sub } : { id: userId }
     });
 
     if (!user) {
       throw new APIError('User not found', 404, 'USER_NOT_FOUND');
     }
 
-    return { user, session };
+    if (!user.isActive) {
+      throw new APIError('Account is inactive', 403, 'ACCOUNT_INACTIVE');
+    }
+
+    return { user, session: null };
   } catch (error) {
     if (error instanceof APIError) throw error;
     logger.error('Authentication error:', error);

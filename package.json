@@ -43,7 +43,7 @@
     "@radix-ui/react-toast": "^1.1.5",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.7.0",
-    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/supabase-js": "^2.57.4",
     "@types/bcryptjs": "^3.0.0",
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.0",
@@ -71,6 +71,7 @@
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
     "eslint-config-next": "14.1.0",
+    "playwright": "^1.55.0",
     "postcss": "^8",
     "tailwindcss": "^3.3.0",
     "typescript": "^5"

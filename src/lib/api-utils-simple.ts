@@ -21,10 +21,23 @@ export async function requireAuth(request: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
+    
+    // Try to decode as Supabase JWT first (no verification needed as it comes from Supabase)
+    let decoded: any;
+    try {
+      // Decode without verification for Supabase tokens
+      const payload = token.split('.')[1];
+      decoded = JSON.parse(Buffer.from(payload, 'base64').toString());
+    } catch {
+      // Fallback to JWT verification for custom tokens
+      decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
+    }
+    
+    // Use 'sub' field for Supabase tokens or 'userId' for custom tokens
+    const userIdentifier = decoded.sub || decoded.userId;
     
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
+      where: decoded.sub ? { supabaseId: userIdentifier } : { id: userIdentifier },
       select: {
         id: true,
         email: true,

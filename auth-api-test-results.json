@@ -1,0 +1,66 @@
+{
+  "testSuite": "Authentication API Tests",
+  "executionTime": "2025-09-14T08:42:10.676Z",
+  "totalTests": 8,
+  "passed": 6,
+  "failed": 2,
+  "errors": 0,
+  "results": [
+    {
+      "testId": "AUTH-001",
+      "testName": "Valid Login API",
+      "status": "PASSED",
+      "details": "Login successful, token received: true",
+      "timestamp": "2025-09-14T08:42:02.724Z"
+    },
+    {
+      "testId": "AUTH-002",
+      "testName": "Invalid Login API",
+      "status": "PASSED",
+      "details": "Correctly rejected invalid credentials: Invalid login credentials",
+      "timestamp": "2025-09-14T08:42:03.174Z"
+    },
+    {
+      "testId": "AUTH-003",
+      "testName": "Empty Fields Validation API",
+      "status": "PASSED",
+      "details": "Correctly rejected empty fields: Status 400",
+      "timestamp": "2025-09-14T08:42:03.440Z"
+    },
+    {
+      "testId": "AUTH-004",
+      "testName": "Registration Page Accessibility",
+      "status": "PASSED",
+      "details": "Registration page loads with expected form elements",
+      "timestamp": "2025-09-14T08:42:06.059Z"
+    },
+    {
+      "testId": "DASH-001",
+      "testName": "Dashboard API Access (Authenticated)",
+      "status": "FAILED",
+      "details": "Status: 500, Response: {\"error\":\"Authentication failed\"}",
+      "timestamp": "2025-09-14T08:42:06.440Z"
+    },
+    {
+      "testId": "DASH-002",
+      "testName": "Dashboard Page Accessibility",
+      "status": "PASSED",
+      "details": "Dashboard page loads with expected content",
+      "timestamp": "2025-09-14T08:42:10.006Z"
+    },
+    {
+      "testId": "DASH-003",
+      "testName": "Dashboard API Access (Unauthenticated)",
+      "status": "PASSED",
+      "details": "Correctly rejected unauthenticated request: Status 500",
+      "timestamp": "2025-09-14T08:42:10.336Z"
+    },
+    {
+      "testId": "ADDITIONAL",
+      "testName": "User Profile API",
+      "status": "FAILED",
+      "details": "Status: 500",
+      "timestamp": "2025-09-14T08:42:10.676Z"
+    }
+  ]
+}

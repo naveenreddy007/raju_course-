@@ -149,23 +149,16 @@ export async function POST(
           userId,
           courseId,
           transactionId: transaction.id,
-          enrolledAt: new Date(),
           status: finalPrice === 0 ? 'ACTIVE' : 'ACTIVE' // All enrollments are active once created
         },
         include: {
           course: {
-            select: {
-              id: true,
-              title: true,
-              thumbnail: true,
-              instructor: {
-                select: {
-                  id: true,
-                  name: true
-                }
-              }
-            }
-          },
+          select: {
+            id: true,
+            title: true,
+            thumbnailUrl: true
+          }
+        },
           transaction: {
             select: {
               id: true,
@@ -177,17 +170,8 @@ export async function POST(
         }
       });
 
-      // If free course, update course enrollment count
+      // If free course, create referral record if applicable
       if (finalPrice === 0) {
-        await tx.course.update({
-          where: { id: courseId },
-          data: {
-            enrollmentCount: {
-              increment: 1
-            }
-          }
-        });
-
         // Create referral record if applicable
         if (referrerId) {
           await tx.referral.create({
@@ -223,7 +207,7 @@ export async function POST(
         amount: finalPrice,
         currency: 'INR',
         message: 'Enrollment initiated. Please complete payment to activate your enrollment.'
-      }, 'Enrollment initiated successfully', 201);
+      }, 201, 'Enrollment initiated successfully');
     }
 
     // For free courses, enrollment is complete
@@ -232,7 +216,7 @@ export async function POST(
       transaction: result.transaction,
       paymentRequired: false,
       message: 'You have been successfully enrolled in this course!'
-    }, 'Enrollment completed successfully', 201);
+    }, 201, 'Enrollment completed successfully');
 
   } catch (error) {
     return handleAPIError(error, 'Failed to enroll in course');
@@ -264,7 +248,7 @@ export async function GET(
           select: {
             id: true,
             title: true,
-            thumbnail: true
+            thumbnailUrl: true
           }
         },
         transaction: {
@@ -293,9 +277,9 @@ export async function GET(
       enrolled: true,
       enrollment,
       status: enrollment.status,
-      enrolledAt: enrollment.enrolledAt,
-      progress: enrollment.progress
-    }, 'Enrollment status retrieved successfully');
+      enrolledAt: enrollment.createdAt,
+      progress: enrollment.progressPercent
+    }, 200, 'Enrollment status retrieved successfully');
 
   } catch (error) {
     return handleAPIError(error, 'Failed to check enrollment status');

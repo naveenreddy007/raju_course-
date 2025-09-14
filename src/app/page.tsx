@@ -106,10 +106,10 @@ const features = [
 ]
 
 const stats = [
-  { number: '10,000+', label: 'Active Learners' },
-  { number: '₹2.5Cr+', label: 'Commissions Paid' },
+  { number: '1,000+', label: 'Active Learners' },
+  { number: '₹50L+', label: 'Commissions Paid' },
   { number: '15+', label: 'Premium Courses' },
-  { number: '98%', label: 'Satisfaction Rate' }
+  { number: '95%', label: 'Satisfaction Rate' }
 ]
 
 export default function HomePage() {

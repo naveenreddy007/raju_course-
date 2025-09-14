@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
             module: {
               courseId: enrollment.courseId
             },
-            completed: true
+            isCompleted: true
           }
         });
 

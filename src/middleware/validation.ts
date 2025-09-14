@@ -53,43 +53,47 @@ const routeValidations: Record<string, z.ZodSchema> = {
 
 export async function validateRequest(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
+  const method = request.method;
+
+  // Only validate requests that typically have a body
+  if (!['POST', 'PUT', 'PATCH'].includes(method)) {
+    return null; // Skip validation for GET, DELETE, etc.
+  }
+
   // Find matching validation schema
-  const schema = Object.keys(routeValidations).find(route => 
+  const schema = Object.keys(routeValidations).find(route =>
     pathname.startsWith(route)
   );
-  
+
   if (!schema) {
     return null; // No validation required for this route
   }
-  
+
   try {
     const body = await request.json();
     const validationSchema = routeValidations[schema];
-    
+
     // Validate request body
     const validatedData = validationSchema.parse(body);
-    
+
     // Add validated data to request headers for downstream use
     const response = NextResponse.next();
     response.headers.set('x-validated-data', JSON.stringify(validatedData));
-    
+
     return null; // No error, continue with the request
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(err => 
-        `${err.path.join('.')}: ${err.message}`
-      ).join(', ');
-      
+      const errorMessages = error.errors.map(err => err.message).join(', ');
+
       return NextResponse.json(
-        { 
+        {
           error: 'Validation failed',
-          details: errorMessages 
+          details: errorMessages
         },
         { status: 400 }
       );
     }
-    
+
     return NextResponse.json(
       { error: 'Invalid request body' },
       { status: 400 }

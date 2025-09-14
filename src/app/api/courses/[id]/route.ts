@@ -32,21 +32,14 @@ export async function GET(
   try {
     const { id } = params;
 
-    // Check if id is a valid UUID or if it might be a slug
+    // Check if id is a valid CUID (starts with 'c' and is 25 chars) or UUID, otherwise treat as slug
+    const isCUID = /^c[a-z0-9]{24}$/i.test(id);
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    const isId = isCUID || isUUID;
     
     const course = await prisma.course.findFirst({
-      where: isUUID ? { id } : { slug: id },
+      where: isId ? { id } : { slug: id },
       include: {
-        instructor: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-            bio: true
-          }
-        },
         modules: {
           orderBy: {
             order: 'asc'
@@ -58,8 +51,8 @@ export async function GET(
             duration: true,
             order: true,
             videoUrl: true,
-            content: true,
-            isPreview: true
+            isActive: true,
+            isFree: true
           }
         },
         _count: {
@@ -78,25 +71,42 @@ export async function GET(
       );
     }
 
-    // Calculate total duration
-    const totalDuration = course.modules.reduce((sum, module) => sum + (module.duration || 0), 0);
+    // Calculate total duration from modules
+    const totalDuration = course.modules.reduce((total, module) => {
+      return total + (module.duration || 0);
+    }, 0);
 
-    // Format response
+    // Format course details for response
     const courseDetails = {
-      ...course,
+      id: course.id,
+      title: course.title,
+      description: course.description,
+      shortDescription: course.shortDescription,
+      slug: course.slug,
+      price: course.price,
+      packageTypes: course.packageTypes,
+      videoUrl: course.videoUrl,
+      thumbnailUrl: course.thumbnailUrl,
+      duration: totalDuration,
+      isActive: course.isActive,
+      isPublished: course.isPublished,
+      createdAt: course.createdAt,
+      updatedAt: course.updatedAt,
+      publishedAt: course.publishedAt,
+      modules: course.modules,
       enrollmentCount: course._count.enrollments,
       moduleCount: course._count.modules,
-      totalDuration,
-      _count: undefined
+      metaTitle: course.metaTitle,
+      metaDescription: course.metaDescription
     };
 
     logger.info(`Course details retrieved`, {
       courseId: course.id,
       title: course.title,
-      accessedBy: isUUID ? 'id' : 'slug'
+      accessedBy: isId ? 'id' : 'slug'
     });
 
-    return createSuccessResponse(courseDetails, 'Course details retrieved successfully');
+    return createSuccessResponse(courseDetails, 200, 'Course details retrieved successfully');
 
   } catch (error) {
     return handleAPIError(error, 'Failed to fetch course details');
@@ -216,7 +226,7 @@ export async function PUT(
       enrollmentCount: updatedCourse._count.enrollments,
       moduleCount: updatedCourse._count.modules,
       _count: undefined
-    }, 'Course updated successfully');
+    }, 200, 'Course updated successfully');
 
   } catch (error) {
     return handleAPIError(error, 'Failed to update course');
@@ -303,6 +313,7 @@ export async function DELETE(
         title: existingCourse.title,
         deletedModules: existingCourse._count.modules
       }, 
+      200,
       'Course deleted successfully'
     );
 

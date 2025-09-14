@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Users, Copy, Share2, Gift, ExternalLink } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +10,39 @@ import { useAuth } from '@/lib/auth'
 
 export default function ReferralsPage() {
   const { user, loading } = useAuth()
+  const [referralData, setReferralData] = useState(null)
+  const [dataLoading, setDataLoading] = useState(true)
+
+  const [referralStats, setReferralStats] = useState({
+    totalReferrals: 0,
+    activeReferrals: 0,
+    totalEarnings: 0
+  })
+
+  useEffect(() => {
+    if (user && !loading) {
+      fetchReferralData()
+    }
+  }, [user, loading])
+
+  const fetchReferralData = async () => {
+    try {
+      const response = await fetch('/api/dashboard/stats')
+      const data = await response.json()
+
+      if (data.success) {
+        setReferralStats({
+          totalReferrals: data.stats.totalReferrals || 0,
+          activeReferrals: data.stats.activeReferrals || 0,
+          totalEarnings: data.stats.totalEarnings || 0
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching referral data:', error)
+    } finally {
+      setDataLoading(false)
+    }
+  }
 
   const copyReferralLink = () => {
     if (user?.affiliate?.referralCode) {
@@ -19,7 +52,7 @@ export default function ReferralsPage() {
     }
   }
 
-  if (loading) {
+  if (loading || dataLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
@@ -62,7 +95,7 @@ export default function ReferralsPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{referralStats.totalReferrals}</div>
               <p className="text-xs text-muted-foreground">People you've referred</p>
             </CardContent>
           </Card>
@@ -73,7 +106,7 @@ export default function ReferralsPage() {
               <Gift className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
+              <div className="text-2xl font-bold">{referralStats.activeReferrals}</div>
               <p className="text-xs text-muted-foreground">Currently earning members</p>
             </CardContent>
           </Card>

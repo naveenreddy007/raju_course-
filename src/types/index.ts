@@ -18,6 +18,7 @@ export interface User {
   createdAt: string
   updatedAt: string
   lastLoginAt?: string
+  affiliate?: Affiliate
 }
 
 export interface Affiliate {
