@@ -15,6 +15,7 @@ build/
 dist/
 
 # Environment variables
+.env
 .env.local
 .env.development.local
 .env.test.local
@@ -126,3 +127,31 @@ temp/
 
 # Prisma
 prisma/migrations/
+
+# Docker volumes and data
+postgres_data/
+storage_data/
+redis_data/
+
+# Supabase local files
+kong.yml
+supabase/
+
+# Test files and scripts
+test-*.js
+scripts/test-*.ps1
+scripts/test-*.sh
+scripts/*.sql
+
+# Local development files
+LOCAL_SUPABASE_DEPLOYMENT_PLAN.md
+CONFIGURATION_VALIDATION_REPORT.md
+DEVELOPMENT_SERVER_VERIFICATION_REPORT.md
+ENDPOINT_TESTING_PLAN.md
+
+# CSV files
+*.csv
+
+# Temporary files
+*.tmp
+*.bak
