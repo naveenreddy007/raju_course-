@@ -1,290 +1,348 @@
-require('dotenv').config();
+const { exec } = require('child_process');
+const fs = require('fs');
 
-const BASE_URL = 'http://localhost:3000';
+// List of test scripts to run
+const testScripts = [
+  'test-auth-register.js',
+  'test-auth-login.js',
+  'test-dashboard-stats.js',
+  'test-courses.js',
+  'test-blog.js',
+  'test-admin-login.js',
+  'test-admin-stats.js'
+];
 
-// Test credentials from our seeded data
-const TEST_USERS = {
-  admin: { email: 'admin@example.com', password: 'admin123' },
-  instructor: { email: 'instructor@example.com', password: 'instructor123' },
-  student: { email: 'student@example.com', password: 'student123' }
+// Function to run a test script
+function runTest(script) {
+  return new Promise((resolve, reject) => {
+    console.log(`\n=== Running ${script} ===`);
+    
+    exec(`node ${script}`, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error: ${error.message}`);
+        return reject(error);
+      }
+      
+      if (stderr) {
+        console.error(`Stderr: ${stderr}`);
+        return reject(new Error(stderr));
+      }
+      
+      console.log(`Output: ${stdout}`);
+      resolve();
+    });
+  });
+}
+
+// Function to create test scripts if they don't exist
+function createTestScripts() {
+  // Create test-auth-register.js
+  if (!fs.existsSync('test-auth-register.js')) {
+    fs.writeFileSync('test-auth-register.js', `
+const http = require('http');
+
+const postData = JSON.stringify({
+  email: 'newuser@example.com',
+  password: 'password123',
+  name: 'New User',
+  phone: '1234567890'
+});
+
+const options = {
+  hostname: 'localhost',
+  port: 3000,
+  path: '/api/auth/register',
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Content-Length': Buffer.byteLength(postData)
+  }
 };
 
-class EndpointTester {
-  constructor() {
-    this.tokens = {};
-    this.results = {
-      passed: 0,
-      failed: 0,
-      tests: []
-    };
+const req = http.request(options, (res) => {
+  let data = '';
+  
+  res.on('data', (chunk) => {
+    data += chunk;
+  });
+  
+  res.on('end', () => {
+    console.log('Status Code:', res.statusCode);
+    console.log('Response:', JSON.parse(data));
+  });
+});
+
+req.on('error', (e) => {
+  console.error(\`Problem with request: \${e.message}\`);
+});
+
+req.write(postData);
+req.end();
+    `);
   }
+  
+  // Create test-auth-login.js
+  if (!fs.existsSync('test-auth-login.js')) {
+    fs.writeFileSync('test-auth-login.js', `
+const http = require('http');
 
-  async log(message, type = 'info') {
-    const timestamp = new Date().toISOString();
-    const prefix = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
-    console.log(`${prefix} [${timestamp.split('T')[1].split('.')[0]}] ${message}`);
+const postData = JSON.stringify({
+  email: 'test@example.com',
+  password: 'password123'
+});
+
+const options = {
+  hostname: 'localhost',
+  port: 3000,
+  path: '/api/auth/login',
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Content-Length': Buffer.byteLength(postData)
   }
+};
 
-  async test(name, testFn) {
-    try {
-      await this.log(`Testing: ${name}`, 'info');
-      await testFn();
-      this.results.passed++;
-      this.results.tests.push({ name, status: 'PASSED' });
-      await this.log(`PASSED: ${name}`, 'success');
-    } catch (error) {
-      this.results.failed++;
-      this.results.tests.push({ name, status: 'FAILED', error: error.message });
-      await this.log(`FAILED: ${name} - ${error.message}`, 'error');
-    }
+const req = http.request(options, (res) => {
+  let data = '';
+  
+  res.on('data', (chunk) => {
+    data += chunk;
+  });
+  
+  res.on('end', () => {
+    console.log('Status Code:', res.statusCode);
+    console.log('Response:', JSON.parse(data));
+  });
+});
+
+req.on('error', (e) => {
+  console.error(\`Problem with request: \${e.message}\`);
+});
+
+req.write(postData);
+req.end();
+    `);
   }
+  
+  // Create test-dashboard-stats.js
+  if (!fs.existsSync('test-dashboard-stats.js')) {
+    fs.writeFileSync('test-dashboard-stats.js', `
+const http = require('http');
 
-  async makeRequest(endpoint, options = {}) {
-    const url = `${BASE_URL}${endpoint}`;
-    const defaultOptions = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      }
-    };
+// Replace with a valid JWT token obtained from login
+const jwtToken = 'your-jwt-token';
 
-    const response = await fetch(url, { ...defaultOptions, ...options });
-    const data = await response.json().catch(() => ({}));
-    
-    return { response, data };
+const options = {
+  hostname: 'localhost',
+  port: 3000,
+  path: '/api/dashboard/stats',
+  method: 'GET',
+  headers: {
+    'Authorization': \`Bearer \${jwtToken}\`
   }
+};
 
-  async authenticateUser(userType) {
-    const user = TEST_USERS[userType];
-    const { response, data } = await this.makeRequest('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(user)
-    });
+const req = http.request(options, (res) => {
+  let data = '';
+  
+  res.on('data', (chunk) => {
+    data += chunk;
+  });
+  
+  res.on('end', () => {
+    console.log('Status Code:', res.statusCode);
+    console.log('Response:', JSON.parse(data));
+  });
+});
 
-    if (response.ok && data.token) {
-      this.tokens[userType] = data.token;
-      return data.token;
-    }
-    throw new Error(`Failed to authenticate ${userType}: ${data.error || 'Unknown error'}`);
+req.on('error', (e) => {
+  console.error(\`Problem with request: \${e.message}\`);
+});
+
+req.end();
+    `);
   }
+  
+  // Create test-courses.js
+  if (!fs.existsSync('test-courses.js')) {
+    fs.writeFileSync('test-courses.js', `
+const http = require('http');
 
-  async runAllTests() {
-    console.log('🚀 COMPREHENSIVE ENDPOINT TESTING');
-    console.log('==================================\n');
+const options = {
+  hostname: 'localhost',
+  port: 3000,
+  path: '/api/courses',
+  method: 'GET'
+};
 
-    // Test 1: Health Check
-    await this.test('Server Health Check', async () => {
-      const { response } = await this.makeRequest('/');
-      if (!response.ok) throw new Error(`Server not responding: ${response.status}`);
-    });
+const req = http.request(options, (res) => {
+  let data = '';
+  
+  res.on('data', (chunk) => {
+    data += chunk;
+  });
+  
+  res.on('end', () => {
+    console.log('Status Code:', res.statusCode);
+    console.log('Response:', JSON.parse(data));
+  });
+});
 
-    // Test 2: Authentication Endpoints
-    await this.test('User Registration', async () => {
-      const newUser = {
-        name: 'Test User',
-        email: `test${Date.now()}@example.com`,
-        phone: '+1234567890',
-        password: 'testpass123',
-        referralCode: 'INST001'
-      };
-      
-      const { response, data } = await this.makeRequest('/api/auth/register', {
-        method: 'POST',
-        body: JSON.stringify(newUser)
-      });
-      
-      if (!response.ok) throw new Error(`Registration failed: ${data.error}`);
-      if (!data.success) throw new Error('Registration response invalid');
-    });
+req.on('error', (e) => {
+  console.error(\`Problem with request: \${e.message}\`);
+});
 
-    await this.test('Admin Login', async () => {
-      await this.authenticateUser('admin');
-    });
+req.end();
+    `);
+  }
+  
+  // Create test-blog.js
+  if (!fs.existsSync('test-blog.js')) {
+    fs.writeFileSync('test-blog.js', `
+const http = require('http');
 
-    await this.test('Instructor Login', async () => {
-      await this.authenticateUser('instructor');
-    });
+const options = {
+  hostname: 'localhost',
+  port: 3000,
+  path: '/api/blog?page=1&limit=10',
+  method: 'GET'
+};
 
-    await this.test('Student Login', async () => {
-      await this.authenticateUser('student');
-    });
+const req = http.request(options, (res) => {
+  let data = '';
+  
+  res.on('data', (chunk) => {
+    data += chunk;
+  });
+  
+  res.on('end', () => {
+    console.log('Status Code:', res.statusCode);
+    console.log('Response:', JSON.parse(data));
+  });
+});
 
-    // Test 3: Public Endpoints
-    await this.test('Get All Courses (Public)', async () => {
-      const { response, data } = await this.makeRequest('/api/courses');
-      if (!response.ok) throw new Error(`Failed to fetch courses: ${data.error}`);
-      if (!Array.isArray(data.data)) throw new Error('Courses data is not an array');
-    });
+req.on('error', (e) => {
+  console.error(\`Problem with request: \${e.message}\`);
+});
 
-    await this.test('Get Course by ID', async () => {
-      // First get a course ID
-      const { data: coursesData } = await this.makeRequest('/api/courses');
-      if (coursesData.data.length === 0) throw new Error('No courses available for testing');
-      
-      const courseId = coursesData.data[0].id;
-      const { response, data } = await this.makeRequest(`/api/courses/${courseId}`);
-      if (!response.ok) throw new Error(`Failed to fetch course: ${data.error}`);
-      if (!data.data) throw new Error('Course data is missing');
-    });
+req.end();
+    `);
+  }
+  
+  // Create test-admin-login.js
+  if (!fs.existsSync('test-admin-login.js')) {
+    fs.writeFileSync('test-admin-login.js', `
+const http = require('http');
 
-    await this.test('Get Blog Posts', async () => {
-      const { response, data } = await this.makeRequest('/api/blog');
-      if (!response.ok) throw new Error(`Failed to fetch blog posts: ${data.error}`);
-      if (!Array.isArray(data.data)) throw new Error('Blog posts data is not an array');
-    });
+const postData = JSON.stringify({
+  email: 'admin@example.com',
+  password: 'adminpassword'
+});
 
-    // Test 4: Protected Endpoints (Student)
-    if (this.tokens.student) {
-      await this.test('Dashboard Stats (Student)', async () => {
-        const { response, data } = await this.makeRequest('/api/dashboard/stats', {
-          headers: { Authorization: `Bearer ${this.tokens.student}` }
-        });
-        if (!response.ok) throw new Error(`Failed to fetch dashboard stats: ${data.error}`);
-        if (!data.data) throw new Error('Dashboard stats data is missing');
-      });
+const options = {
+  hostname: 'localhost',
+  port: 3000,
+  path: '/api/admin/login',
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Content-Length': Buffer.byteLength(postData)
+  }
+};
 
-      await this.test('Dashboard Courses (Student)', async () => {
-        const { response, data } = await this.makeRequest('/api/dashboard/courses', {
-          headers: { Authorization: `Bearer ${this.tokens.student}` }
-        });
-        if (!response.ok) throw new Error(`Failed to fetch dashboard courses: ${data.error}`);
-        if (!Array.isArray(data.data)) throw new Error('Dashboard courses data is not an array');
-      });
+const req = http.request(options, (res) => {
+  let data = '';
+  
+  res.on('data', (chunk) => {
+    data += chunk;
+  });
+  
+  res.on('end', () => {
+    console.log('Status Code:', res.statusCode);
+    console.log('Response:', JSON.parse(data));
+  });
+});
 
-      await this.test('Dashboard Earnings (Student)', async () => {
-        const { response, data } = await this.makeRequest('/api/dashboard/earnings', {
-          headers: { Authorization: `Bearer ${this.tokens.student}` }
-        });
-        if (!response.ok) throw new Error(`Failed to fetch earnings: ${data.error}`);
-        if (!data.data) throw new Error('Earnings data is missing');
-      });
-    }
+req.on('error', (e) => {
+  console.error(\`Problem with request: \${e.message}\`);
+});
 
-    // Test 5: Admin Endpoints
-    if (this.tokens.admin) {
-      await this.test('Admin - Get All Users', async () => {
-        const { response, data } = await this.makeRequest('/api/admin/users', {
-          headers: { Authorization: `Bearer ${this.tokens.admin}` }
-        });
-        if (!response.ok) throw new Error(`Failed to fetch users: ${data.error}`);
-        if (!Array.isArray(data.data)) throw new Error('Users data is not an array');
-      });
+req.write(postData);
+req.end();
+    `);
+  }
+  
+  // Create test-admin-stats.js
+  if (!fs.existsSync('test-admin-stats.js')) {
+    fs.writeFileSync('test-admin-stats.js', `
+const http = require('http');
 
-      await this.test('Admin - Get All Courses', async () => {
-        const { response, data } = await this.makeRequest('/api/admin/courses', {
-          headers: { Authorization: `Bearer ${this.tokens.admin}` }
-        });
-        if (!response.ok) throw new Error(`Failed to fetch admin courses: ${data.error}`);
-        if (!Array.isArray(data.data)) throw new Error('Admin courses data is not an array');
-      });
+// Replace with a valid admin JWT token obtained from admin login
+const jwtToken = 'your-admin-jwt-token';
 
-      await this.test('Admin - Create Course', async () => {
-        const newCourse = {
-          title: 'Test Course',
-          description: 'This is a test course',
-          price: 1999,
-          level: 'BEGINNER',
-          category: 'Test',
-          duration: 20,
-          packageTypes: ['BASIC'],
-          instructorId: this.tokens.instructor ? 'instructor-id' : 'test-instructor-id'
-        };
-        
-        const { response, data } = await this.makeRequest('/api/admin/courses', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${this.tokens.admin}` },
-          body: JSON.stringify(newCourse)
-        });
-        
-        if (!response.ok) throw new Error(`Failed to create course: ${data.error}`);
-        if (!data.success) throw new Error('Course creation response invalid');
-      });
-    }
+const options = {
+  hostname: 'localhost',
+  port: 3000,
+  path: '/api/admin/stats',
+  method: 'GET',
+  headers: {
+    'Authorization': \`Bearer \${jwtToken}\`
+  }
+};
 
-    // Test 6: Payment Endpoints
-    await this.test('Create Payment Order', async () => {
-      if (!this.tokens.student) throw new Error('Student token required');
-      
-      // Get a course for payment
-      const { data: coursesData } = await this.makeRequest('/api/courses');
-      if (coursesData.data.length === 0) throw new Error('No courses available');
-      
-      const course = coursesData.data[0];
-      const orderData = {
-        courseId: course.id,
-        amount: course.price
-      };
-      
-      const { response, data } = await this.makeRequest('/api/payments/create-order', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${this.tokens.student}` },
-        body: JSON.stringify(orderData)
-      });
-      
-      if (!response.ok) throw new Error(`Failed to create payment order: ${data.error}`);
-      if (!data.orderId) throw new Error('Order ID missing from response');
-    });
+const req = http.request(options, (res) => {
+  let data = '';
+  
+  res.on('data', (chunk) => {
+    data += chunk;
+  });
+  
+  res.on('end', () => {
+    console.log('Status Code:', res.statusCode);
+    console.log('Response:', JSON.parse(data));
+  });
+});
 
-    // Test 7: Withdrawal Endpoints
-    if (this.tokens.student) {
-      await this.test('Get Withdrawal Requests', async () => {
-        const { response, data } = await this.makeRequest('/api/withdrawals', {
-          headers: { Authorization: `Bearer ${this.tokens.student}` }
-        });
-        if (!response.ok) throw new Error(`Failed to fetch withdrawals: ${data.error}`);
-        if (!Array.isArray(data.data)) throw new Error('Withdrawals data is not an array');
-      });
-    }
+req.on('error', (e) => {
+  console.error(\`Problem with request: \${e.message}\`);
+});
 
-    // Test 8: Newsletter Subscription
-    await this.test('Newsletter Subscription', async () => {
-      const subscriptionData = {
-        email: `newsletter${Date.now()}@example.com`
-      };
-      
-      const { response, data } = await this.makeRequest('/api/newsletter/subscribe', {
-        method: 'POST',
-        body: JSON.stringify(subscriptionData)
-      });
-      
-      if (!response.ok) throw new Error(`Failed to subscribe to newsletter: ${data.error}`);
-      if (!data.success) throw new Error('Newsletter subscription response invalid');
-    });
-
-    // Print Results
-    console.log('\n📊 TEST RESULTS');
-    console.log('================');
-    console.log(`✅ Passed: ${this.results.passed}`);
-    console.log(`❌ Failed: ${this.results.failed}`);
-    console.log(`📈 Success Rate: ${((this.results.passed / (this.results.passed + this.results.failed)) * 100).toFixed(1)}%`);
-    
-    if (this.results.failed > 0) {
-      console.log('\n❌ FAILED TESTS:');
-      this.results.tests
-        .filter(test => test.status === 'FAILED')
-        .forEach(test => {
-          console.log(`  - ${test.name}: ${test.error}`);
-        });
-    }
-
-    console.log('\n🎉 ENDPOINT TESTING COMPLETED!');
-    return this.results;
+req.end();
+    `);
   }
 }
 
-// Run the tests
-async function runTests() {
-  const tester = new EndpointTester();
-  
-  // Wait a bit for server to be ready
-  console.log('⏳ Waiting for server to be ready...');
-  await new Promise(resolve => setTimeout(resolve, 5000));
-  
+// Main function to run all tests
+async function runAllTests() {
   try {
-    await tester.runAllTests();
+    console.log('=== Starting Endpoint Tests ===');
+    
+    // Create test scripts if they don't exist
+    createTestScripts();
+    
+    // Run all test scripts
+    for (const script of testScripts) {
+      await runTest(script);
+    }
+    
+    console.log('\n=== All Tests Completed ===');
+    console.log('\n=== Manual Testing Instructions ===');
+    console.log('1. Navigate to http://localhost:3000/auth/login');
+    console.log('2. Log in with a user account');
+    console.log('3. Verify that you are redirected to the client dashboard at http://localhost:3000/dashboard');
+    console.log('4. Check that all dashboard components are displayed correctly');
+    console.log('5. Test navigation between different dashboard sections (courses, earnings, referrals, etc.)');
+    console.log('\n=== Admin Dashboard Testing ===');
+    console.log('1. Navigate to http://localhost:3000/admin/login');
+    console.log('2. Log in with an admin account');
+    console.log('3. Verify that you are redirected to the admin dashboard at http://localhost:3000/admin');
+    console.log('4. Check that all admin dashboard components are displayed correctly');
+    console.log('5. Test navigation between different admin sections (users, courses, stats, etc.)');
   } catch (error) {
-    console.error('❌ Test suite failed:', error);
+    console.error('Error running tests:', error);
+    process.exit(1);
   }
 }
 
-runTests();
+// Run all tests
+runAllTests();

@@ -97,7 +97,7 @@ export async function middleware(request: NextRequest) {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https: blob:",
-    "connect-src 'self' https://api.razorpay.com https://api.stripe.com",
+    "connect-src 'self' http://localhost:8000 https://yrpcgkrichksljfrtmvs.supabase.co https://api.razorpay.com https://api.stripe.com",
     "frame-src https://checkout.razorpay.com https://js.stripe.com"
   ].join('; ');
   

@@ -3,11 +3,11 @@ import { z } from 'zod';
 
 // Common validation schemas
 export const schemas = {
-  // User registration schema
+  // User registration schema (for profile creation after Supabase auth)
   register: z.object({
+    supabaseId: z.string().min(1, 'Supabase ID is required'),
     email: z.string().email('Invalid email address'),
     name: z.string().min(2, 'Name must be at least 2 characters'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
     phone: z.string().optional(),
     referralCode: z.string().optional()
   }),

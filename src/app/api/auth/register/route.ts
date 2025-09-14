@@ -7,16 +7,16 @@ import { supabase } from '@/lib/supabase'
 export async function POST(request: NextRequest) {
   try {
     const {
+      supabaseId,
       email,
       name,
       phone,
-      password,
       referralCode
     } = await request.json()
 
-    if (!email || !name || !password) {
+    if (!supabaseId || !email || !name) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields', details: `supabaseId: ${supabaseId ? 'Present' : 'Required'}, email: ${email ? 'Present' : 'Required'}, name: ${name ? 'Present' : 'Required'}` },
         { status: 400 }
       )
     }
@@ -40,37 +40,15 @@ export async function POST(request: NextRequest) {
         where: { referralCode },
         include: { user: true }
       })
-      
+
       if (!parentAffiliate) {
         return NextResponse.json(
           { error: 'Invalid referral code' },
           { status: 400 }
         )
       }
-      
+
       referredById = parentAffiliate.userId
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12)
-
-    // Create user with Supabase Auth first
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
-          phone
-        }
-      }
-    })
-
-    if (authError || !authData.user) {
-      return NextResponse.json(
-        { error: authError?.message || 'Failed to create auth account' },
-        { status: 500 }
-      )
     }
 
     // Create user record
@@ -79,7 +57,7 @@ export async function POST(request: NextRequest) {
         email: email.toLowerCase(),
         name,
         phone,
-        supabaseId: authData.user.id, // Use Supabase user ID
+        supabaseId: supabaseId, // Use provided Supabase user ID
         emailVerified: false,
         phoneVerified: false,
         isActive: true

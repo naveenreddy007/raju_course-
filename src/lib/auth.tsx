@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (data: RegisterData) => {
     try {
-      console.log('Starting signup process...', { email: data.email, name: data.name, packageType: data.packageType })
+      console.log('Starting signup process...', { email: data.email, name: data.name })
       
       // Sign up with Supabase Auth first
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -127,21 +127,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!response.ok) {
         const errorText = await response.text()
         console.error('API error response:', errorText)
-        
+
         let errorData
         try {
           errorData = JSON.parse(errorText)
         } catch {
           errorData = { error: errorText }
         }
-        
-        // If profile creation fails, try to delete the Supabase auth user
-        try {
-          await supabase.auth.admin.deleteUser(authData.user.id)
-        } catch (cleanupError) {
-          console.error('Failed to cleanup auth user:', cleanupError)
-        }
-        
+
         return { error: errorData.error || 'Failed to create user profile' }
       }
       

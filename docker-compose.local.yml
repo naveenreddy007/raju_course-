@@ -1,0 +1,208 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15
+    container_name: supabase-db-local
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-local.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Supabase Studio (Web UI)
+  studio:
+    image: supabase/studio:latest
+    container_name: supabase-studio-local
+    environment:
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1sb2NhbCIsInJlZiI6ImxvY2FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE2MDAwMDAwMDAsImV4cCI6MTk2MDAwMDAwMH0.LOCAL_ANON_KEY
+    ports:
+      - "3001:3000"
+    depends_on:
+      - kong
+
+  # Kong API Gateway
+  kong:
+    image: kong:2.8.1
+    container_name: supabase-kong-local
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+    volumes:
+      - ./kong.yml:/var/lib/kong/kong.yml
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+    depends_on:
+      - auth
+
+  # Supabase Auth
+  auth:
+    image: supabase/gotrue:v2.44.0
+    container_name: supabase-auth-local
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: http://localhost:8000
+
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgresql://postgres:postgres@db:5432/postgres
+
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_ISSUER: http://localhost:8000/auth/v1
+      GOTRUE_JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
+
+      GOTRUE_SITE_URL: http://localhost:3000
+      GOTRUE_URI_ALLOW_LIST: ""
+      GOTRUE_DISABLE_SIGNUP: false
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: true
+      GOTRUE_MAILER_AUTOCONFIRM: true
+      GOTRUE_SMTP_ADMIN_EMAIL: roprly@bilvanaturals.online
+      GOTRUE_SMTP_HOST: smtp.hostinger.com
+      GOTRUE_SMTP_PORT: 465
+      GOTRUE_SMTP_SECURE: true
+      GOTRUE_SMTP_USER: roprly@bilvanaturals.online
+      GOTRUE_SMTP_PASS: Who@reddamma999
+      GOTRUE_SMTP_SENDER_NAME: KBR & Associates
+      GOTRUE_MAILER_URLPATHS_INVITE: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_CONFIRMATION: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_RECOVERY: /auth/v1/verify
+      GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: /auth/v1/verify
+
+      GOTRUE_EXTERNAL_GOOGLE_ENABLED: false
+      GOTRUE_EXTERNAL_GITHUB_ENABLED: false
+      GOTRUE_EXTERNAL_GITLAB_ENABLED: false
+      GOTRUE_EXTERNAL_BITBUCKET_ENABLED: false
+      GOTRUE_EXTERNAL_APPLE_ENABLED: false
+      GOTRUE_EXTERNAL_FACEBOOK_ENABLED: false
+      GOTRUE_EXTERNAL_MICROSOFT_ENABLED: false
+      GOTRUE_EXTERNAL_TWILIO_ENABLED: false
+      GOTRUE_EXTERNAL_DISCORD_ENABLED: false
+    ports:
+      - "9999:9999"
+    depends_on:
+      - db
+    command: >
+      sh -c "/bin/set-migration.sh && /bin/gotrue"
+
+  # Supabase REST API
+  rest:
+    image: postgrest/postgrest:v11.2.0
+    container_name: supabase-rest-local
+    environment:
+      PGRST_DB_URI: postgresql://postgres:postgres@db:5432/postgres
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: postgres
+      PGRST_DB_USE_LEGACY_GUCS: false
+      PGRST_JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
+    depends_on:
+      - db
+    ports:
+      - "3002:3000"
+
+  # Supabase Realtime
+  realtime:
+    image: supabase/realtime:v2.27.1
+    container_name: supabase-realtime-local
+    environment:
+      PORT: 4000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: postgres
+      DB_AFTER_CONNECT_QUERY: 'SET statement_timeout TO 60000'
+      DB_ENC_KEY: super-secret-jwt-token-with-at-least-32-characters-long
+      API_JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
+      FLY_ALLOC_ID: fly123
+      FLY_APP_NAME: realtime
+      SECRET_KEY_BASE: UpNVntn3cDxHJpq99YMc1T1AQgQpc8kfWoUvCYTEnpp=
+      ERL_AFLAGS: -proto inet +pc unicode
+      ENABLE_TAILSCALE: false
+      DNS_NODES: "realtime@realtime.supabase-realtime-local"
+    depends_on:
+      - db
+    ports:
+      - "4000:4000"
+    command: >
+      sh -c "/app/bin/migrate && /app/bin/realtime"
+
+  # Supabase Storage
+  storage:
+    image: supabase/storage-api:v0.43.2
+    container_name: supabase-storage-local
+    environment:
+      ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1sb2NhbCIsInJlZiI6ImxvY2FsIiwicm9sZSI6ImFub24iLCJpYXQiOjE2MDAwMDAwMDAsImV4cCI6MTk2MDAwMDAwMH0.LOCAL_ANON_KEY
+      SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1sb2NhbCIsInJlZiI6ImxvY2FsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTYwMDAwMDAwMCwiZXhwIjoxOTYwMDAwMDAwfQ.LOCAL_SERVICE_ROLE_KEY
+      POSTGREST_URL: http://rest:3000
+      PGRST_JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/postgres
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: stub
+      GLOBAL_S3_BUCKET: stub
+      ENABLE_IMAGE_TRANSFORMATION: true
+      IMGPROXY_URL: http://imgproxy:5001
+    depends_on:
+      - rest
+      - db
+    ports:
+      - "5000:5000"
+
+  # Supabase Imgproxy
+  imgproxy:
+    image: darthsim/imgproxy:v3.8.0
+    container_name: supabase-imgproxy-local
+    environment:
+      IMGPROXY_BIND: ":5001"
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /var/lib/storage
+      IMGPROXY_USE_ETAG: "true"
+      IMGPROXY_ENABLE_WEBP_DETECTION: "true"
+    volumes:
+      - storage_data:/var/lib/storage
+    depends_on:
+      - storage
+
+  # Supabase Meta
+  meta:
+    image: supabase/postgres-meta:v0.67.0
+    container_name: supabase-meta-local
+    environment:
+      PG_META_PORT: 8080
+      PG_META_DB_HOST: db
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: postgres
+      PG_META_DB_USER: postgres
+      PG_META_DB_PASSWORD: postgres
+    depends_on:
+      - db
+    ports:
+      - "8080:8080"
+
+
+
+volumes:
+  postgres_data:
+    driver: local
+  storage_data:
+    driver: local
