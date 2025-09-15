@@ -1,0 +1,119 @@
+{
+  "pages": [
+    {
+      "page": "Home",
+      "path": "/",
+      "status": 200,
+      "loaded": true,
+      "title": "Affiliate Learning Platform",
+      "hasReactRoot": false,
+      "hasNav": true,
+      "hasMain": true,
+      "hasForm": null,
+      "contentLength": 33547
+    },
+    {
+      "page": "Packages",
+      "path": "/packages",
+      "status": 200,
+      "loaded": true,
+      "title": "Affiliate Learning Platform",
+      "hasReactRoot": false,
+      "hasNav": true,
+      "hasMain": true,
+      "hasForm": null,
+      "contentLength": 11944
+    },
+    {
+      "page": "Dashboard",
+      "path": "/dashboard",
+      "status": 200,
+      "loaded": true,
+      "title": "Affiliate Learning Platform",
+      "hasReactRoot": false,
+      "hasNav": true,
+      "hasMain": true,
+      "hasForm": null,
+      "contentLength": 11593
+    },
+    {
+      "page": "Sign In",
+      "path": "/auth/signin",
+      "status": 404,
+      "loaded": false,
+      "title": "404: This page could not be found.",
+      "hasReactRoot": false,
+      "hasNav": true,
+      "hasMain": true,
+      "hasForm": false,
+      "contentLength": 13321
+    },
+    {
+      "page": "Sign Up",
+      "path": "/auth/signup",
+      "status": 404,
+      "loaded": false,
+      "title": "404: This page could not be found.",
+      "hasReactRoot": false,
+      "hasNav": true,
+      "hasMain": true,
+      "hasForm": false,
+      "contentLength": 13321
+    }
+  ],
+  "apis": [
+    {
+      "endpoint": "/api/packages",
+      "method": "GET",
+      "status": 200,
+      "expectedStatus": 200,
+      "success": true,
+      "contentType": "application/json;charset=utf-8",
+      "isJson": true,
+      "dataType": "object",
+      "dataLength": null
+    },
+    {
+      "endpoint": "/api/packages/purchase",
+      "method": "POST",
+      "status": 401,
+      "expectedStatus": 401,
+      "success": true,
+      "contentType": "application/json;charset=utf-8",
+      "isJson": true,
+      "dataType": "object",
+      "dataLength": null
+    },
+    {
+      "endpoint": "/api/auth/session",
+      "method": "GET",
+      "status": 404,
+      "expectedStatus": 200,
+      "success": false,
+      "contentType": "text/html; charset=utf-8",
+      "isJson": false,
+      "dataType": "string",
+      "dataLength": 13330
+    },
+    {
+      "endpoint": "/api/referrals",
+      "method": "GET",
+      "status": 500,
+      "expectedStatus": 401,
+      "success": false,
+      "contentType": "application/json;charset=utf-8",
+      "isJson": true,
+      "dataType": "object",
+      "dataLength": null
+    }
+  ],
+  "components": [
+    {
+      "component": "Packages Page Data Fetching",
+      "hasLoadingState": true,
+      "hasPackageData": false,
+      "hasPricing": false,
+      "working": false
+    }
+  ]
+}

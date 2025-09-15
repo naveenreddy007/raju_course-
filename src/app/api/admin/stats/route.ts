@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { checkAdminAuth, createAdminAuthResponse } from '@/lib/admin-auth'
+import { requireAuth } from '@/lib/api-utils-simple'
 import { prisma } from '@/lib/prisma'
 import { KYCStatus, WithdrawalStatus } from '@/types'
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await checkAdminAuth(request)
-    
-    if (!authResult.authorized) {
-      return createAdminAuthResponse(authResult.error || 'Unauthorized')
-    }
+    const { user } = await requireAuth(request);
 
     // Get all stats in parallel
     const [

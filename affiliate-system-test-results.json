@@ -1,0 +1,153 @@
+{
+  "packages": [
+    {
+      "test": "Package Listing",
+      "status": 200,
+      "working": true,
+      "hasData": true,
+      "packages": [
+        {
+          "id": "silver",
+          "name": "Silver Package",
+          "basePrice": 2999,
+          "gst": 539.82,
+          "finalPrice": 3538.82,
+          "features": {
+            "courses": [
+              "Basic Trading Course",
+              "Market Analysis Basics"
+            ],
+            "support": "24/7 Chat Support",
+            "validity": "6 months",
+            "webinars": "Monthly webinars",
+            "materials": "Digital materials included"
+          },
+          "commissionRates": {
+            "direct": 15,
+            "indirect": 5
+          },
+          "isActive": true,
+          "createdAt": "2025-09-14T10:52:03.049Z"
+        },
+        {
+          "id": "gold",
+          "name": "Gold Package",
+          "basePrice": 4999,
+          "gst": 899.82,
+          "finalPrice": 5898.82,
+          "features": {
+            "courses": [
+              "Advanced Trading Course",
+              "Technical Analysis",
+              "Risk Management"
+            ],
+            "support": "24/7 Phone & Chat Support",
+            "validity": "12 months",
+            "webinars": "Weekly webinars",
+            "materials": "Digital + Physical materials",
+            "mentorship": "1-on-1 monthly sessions"
+          },
+          "commissionRates": {
+            "direct": 15,
+            "indirect": 5
+          },
+          "isActive": true,
+          "createdAt": "2025-09-14T10:52:03.715Z"
+        },
+        {
+          "id": "platinum",
+          "name": "Platinum Package",
+          "basePrice": 9999,
+          "gst": 1799.82,
+          "finalPrice": 11798.82,
+          "features": {
+            "courses": [
+              "Complete Trading Mastery",
+              "Advanced Strategies",
+              "Portfolio Management",
+              "Options Trading"
+            ],
+            "support": "Dedicated account manager",
+            "validity": "24 months",
+            "webinars": "Daily market analysis",
+            "community": "Exclusive trader community access",
+            "exclusive": "VIP trading signals",
+            "materials": "Premium physical kit + Digital access",
+            "mentorship": "Weekly 1-on-1 sessions"
+          },
+          "commissionRates": {
+            "direct": 15,
+            "indirect": 5
+          },
+          "isActive": true,
+          "createdAt": "2025-09-14T10:52:04.359Z"
+        }
+      ],
+      "packageCount": 3
+    }
+  ],
+  "auth": [
+    {
+      "test": "User Registration",
+      "status": 400,
+      "working": true,
+      "hasResponse": true,
+      "message": "Missing required fields"
+    }
+  ],
+  "dashboard": [
+    {
+      "test": "Packages Page",
+      "path": "/packages",
+      "status": 200,
+      "working": true,
+      "hasContent": true,
+      "hasReact": true,
+      "hasError": true
+    },
+    {
+      "test": "Login Page",
+      "path": "/auth/login",
+      "status": 200,
+      "working": true,
+      "hasContent": true,
+      "hasReact": true,
+      "hasError": true
+    },
+    {
+      "test": "Register Page",
+      "path": "/auth/register",
+      "status": 200,
+      "working": true,
+      "hasContent": true,
+      "hasReact": true,
+      "hasError": true
+    },
+    {
+      "test": "Dashboard Page",
+      "path": "/dashboard",
+      "status": 200,
+      "working": true,
+      "hasContent": true,
+      "hasReact": true,
+      "hasError": true
+    }
+  ],
+  "referrals": [
+    {
+      "test": "Referral System",
+      "status": 500,
+      "working": false,
+      "requiresAuth": false
+    }
+  ],
+  "commission": [],
+  "overall": {
+    "total": 7,
+    "working": 6,
+    "score": 86,
+    "issues": [
+      "Referral System: 500"
+    ]
+  }
+}

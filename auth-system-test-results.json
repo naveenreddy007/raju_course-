@@ -1,0 +1,173 @@
+{
+  "pages": [
+    {
+      "page": "Sign In",
+      "path": "/auth/login",
+      "status": 200,
+      "exists": true,
+      "hasForm": true,
+      "hasEmailInput": true,
+      "hasPasswordInput": true,
+      "hasSubmitButton": true,
+      "functional": true
+    },
+    {
+      "page": "Sign Up",
+      "path": "/auth/register",
+      "status": 200,
+      "exists": true,
+      "hasForm": true,
+      "hasEmailInput": true,
+      "hasPasswordInput": true,
+      "hasSubmitButton": true,
+      "functional": true
+    },
+    {
+      "page": "Register",
+      "path": "/register",
+      "status": 404,
+      "exists": false,
+      "hasForm": false,
+      "hasEmailInput": false,
+      "hasPasswordInput": false,
+      "hasSubmitButton": false,
+      "functional": false
+    },
+    {
+      "page": "Login",
+      "path": "/login",
+      "status": 404,
+      "exists": false,
+      "hasForm": false,
+      "hasEmailInput": false,
+      "hasPasswordInput": false,
+      "hasSubmitButton": false,
+      "functional": false
+    },
+    {
+      "page": "Verify Email",
+      "path": "/auth/verify-email",
+      "status": 200,
+      "exists": true,
+      "hasForm": false,
+      "hasEmailInput": true,
+      "hasPasswordInput": false,
+      "hasSubmitButton": false,
+      "functional": false
+    }
+  ],
+  "apis": [
+    {
+      "endpoint": "/api/auth/user",
+      "method": "GET",
+      "description": "Get current user",
+      "status": 405,
+      "exists": true,
+      "contentType": null,
+      "hasErrorMessage": false,
+      "hasSuccessMessage": false,
+      "isAuthRequired": false,
+      "working": true
+    },
+    {
+      "endpoint": "/api/auth/login",
+      "method": "POST",
+      "description": "Login user",
+      "status": 500,
+      "exists": true,
+      "contentType": "text/html; charset=utf-8",
+      "hasErrorMessage": false,
+      "hasSuccessMessage": false,
+      "isAuthRequired": false,
+      "working": false
+    },
+    {
+      "endpoint": "/api/auth/register",
+      "method": "POST",
+      "description": "Register user",
+      "status": 500,
+      "exists": true,
+      "contentType": "text/html; charset=utf-8",
+      "hasErrorMessage": false,
+      "hasSuccessMessage": false,
+      "isAuthRequired": false,
+      "working": false
+    },
+    {
+      "endpoint": "/api/auth/kyc",
+      "method": "POST",
+      "description": "Submit KYC",
+      "status": 500,
+      "exists": true,
+      "contentType": "text/html; charset=utf-8",
+      "hasErrorMessage": false,
+      "hasSuccessMessage": false,
+      "isAuthRequired": false,
+      "working": false
+    },
+    {
+      "endpoint": "/api/user/profile",
+      "method": "GET",
+      "description": "Get user profile",
+      "status": 500,
+      "exists": true,
+      "contentType": "text/html; charset=utf-8",
+      "hasErrorMessage": false,
+      "hasSuccessMessage": false,
+      "isAuthRequired": false,
+      "working": false
+    },
+    {
+      "endpoint": "/api/referrals",
+      "method": "GET",
+      "description": "Get user referrals",
+      "status": 500,
+      "exists": true,
+      "contentType": "text/html; charset=utf-8",
+      "hasErrorMessage": false,
+      "hasSuccessMessage": false,
+      "isAuthRequired": false,
+      "working": false
+    },
+    {
+      "endpoint": "/api/dashboard/stats",
+      "method": "GET",
+      "description": "Get dashboard stats",
+      "status": 500,
+      "exists": true,
+      "contentType": "text/html; charset=utf-8",
+      "hasErrorMessage": false,
+      "hasSuccessMessage": false,
+      "isAuthRequired": false,
+      "working": false
+    }
+  ],
+  "flows": [
+    {
+      "page": "/dashboard",
+      "status": 500,
+      "protected": false,
+      "redirected": false
+    },
+    {
+      "page": "/profile",
+      "status": 500,
+      "protected": false,
+      "redirected": false
+    },
+    {
+      "page": "/referrals",
+      "status": 500,
+      "protected": false,
+      "redirected": false
+    }
+  ],
+  "database": [
+    {
+      "component": "Supabase Auth Setup",
+      "hasSupabaseUrl": true,
+      "hasSupabaseKey": true,
+      "configured": true
+    }
+  ]
+}

@@ -1,0 +1,249 @@
+{
+  "pages": [
+    {
+      "name": "Home",
+      "path": "/",
+      "status": 500,
+      "working": false,
+      "hasReactRoot": true,
+      "hasError": true,
+      "size": 5607
+    },
+    {
+      "name": "Packages",
+      "path": "/packages",
+      "status": 200,
+      "working": true,
+      "hasReactRoot": true,
+      "hasError": true,
+      "size": 12160
+    },
+    {
+      "name": "Login",
+      "path": "/auth/login",
+      "status": 200,
+      "working": true,
+      "hasReactRoot": true,
+      "hasError": true,
+      "size": 16578
+    },
+    {
+      "name": "Register",
+      "path": "/auth/register",
+      "status": 200,
+      "working": true,
+      "hasReactRoot": true,
+      "hasError": true,
+      "size": 22043
+    },
+    {
+      "name": "Dashboard",
+      "path": "/dashboard",
+      "status": 200,
+      "working": true,
+      "hasReactRoot": true,
+      "hasError": true,
+      "size": 11790
+    },
+    {
+      "name": "Referrals",
+      "path": "/dashboard/referrals",
+      "status": 200,
+      "working": true,
+      "hasReactRoot": true,
+      "hasError": true,
+      "size": 12361
+    },
+    {
+      "name": "Profile",
+      "path": "/dashboard/profile",
+      "status": 200,
+      "working": true,
+      "hasReactRoot": true,
+      "hasError": true,
+      "size": 12447
+    },
+    {
+      "name": "About",
+      "path": "/about",
+      "status": 200,
+      "working": true,
+      "hasReactRoot": true,
+      "hasError": true,
+      "size": 19682
+    },
+    {
+      "name": "Contact",
+      "path": "/contact",
+      "status": 200,
+      "working": true,
+      "hasReactRoot": true,
+      "hasError": true,
+      "size": 20638
+    }
+  ],
+  "apis": [
+    {
+      "endpoint": "/api/packages",
+      "method": "GET",
+      "status": 200,
+      "working": true,
+      "contentType": "application/json;charset=utf-8",
+      "hasData": true,
+      "isJSON": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/auth/register",
+      "method": "POST",
+      "status": 400,
+      "working": false,
+      "contentType": "application/json;charset=utf-8",
+      "hasData": true,
+      "isJSON": true,
+      "error": {
+        "error": "Missing required fields",
+        "details": "supabaseId: Required, email: Present, name: Present"
+      }
+    },
+    {
+      "endpoint": "/api/auth/login",
+      "method": "POST",
+      "status": 401,
+      "working": false,
+      "contentType": "application/json;charset=utf-8",
+      "hasData": true,
+      "isJSON": true,
+      "error": {
+        "error": "Invalid login credentials"
+      }
+    },
+    {
+      "endpoint": "/api/auth/user",
+      "method": "GET",
+      "status": 0,
+      "working": false,
+      "error": "Body already used"
+    },
+    {
+      "endpoint": "/api/user/profile",
+      "method": "GET",
+      "status": 500,
+      "working": false,
+      "contentType": "application/json;charset=utf-8",
+      "hasData": true,
+      "isJSON": true,
+      "error": {
+        "error": "Failed to fetch user profile"
+      }
+    },
+    {
+      "endpoint": "/api/referrals",
+      "method": "GET",
+      "status": 500,
+      "working": false,
+      "contentType": "application/json;charset=utf-8",
+      "hasData": true,
+      "isJSON": true,
+      "error": {
+        "success": false,
+        "error": "Failed to fetch referral data"
+      }
+    },
+    {
+      "endpoint": "/api/dashboard/stats",
+      "method": "GET",
+      "status": 401,
+      "working": false,
+      "contentType": "application/json;charset=utf-8",
+      "hasData": true,
+      "isJSON": true,
+      "error": {
+        "error": "No authorization header"
+      }
+    },
+    {
+      "endpoint": "/api/commission/stats",
+      "method": "GET",
+      "status": 0,
+      "working": false,
+      "error": "Body already used"
+    },
+    {
+      "endpoint": "/api/packages",
+      "method": "GET",
+      "status": 200,
+      "working": true,
+      "contentType": "application/json;charset=utf-8",
+      "hasData": true,
+      "isJSON": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/packages/purchase",
+      "method": "POST",
+      "status": 401,
+      "working": false,
+      "contentType": "application/json;charset=utf-8",
+      "hasData": true,
+      "isJSON": true,
+      "error": {
+        "success": false,
+        "error": "Authorization header required"
+      }
+    }
+  ],
+  "auth": [],
+  "packages": [
+    {
+      "endpoint": "/api/packages",
+      "method": "GET",
+      "status": 200,
+      "working": true,
+      "contentType": "application/json;charset=utf-8",
+      "hasData": true,
+      "isJSON": true,
+      "error": null,
+      "name": "List Packages"
+    },
+    {
+      "endpoint": "/api/packages/purchase",
+      "method": "POST",
+      "status": 401,
+      "working": false,
+      "contentType": "application/json;charset=utf-8",
+      "hasData": true,
+      "isJSON": true,
+      "error": {
+        "success": false,
+        "error": "Authorization header required"
+      },
+      "name": "Purchase Flow"
+    }
+  ],
+  "database": [],
+  "overall": {
+    "score": 11,
+    "total": 19,
+    "working": 2,
+    "issues": [
+      "Page Home: 500",
+      "Page Packages: 200",
+      "Page Login: 200",
+      "Page Register: 200",
+      "Page Dashboard: 200",
+      "Page Referrals: 200",
+      "Page Profile: 200",
+      "Page About: 200",
+      "Page Contact: 200",
+      "API /api/auth/register: 400",
+      "API /api/auth/login: 401",
+      "API /api/auth/user: Connection failed",
+      "API /api/user/profile: 500",
+      "API /api/referrals: 500",
+      "API /api/dashboard/stats: 401",
+      "API /api/commission/stats: Connection failed",
+      "API /api/packages/purchase: 401"
+    ]
+  }
+}

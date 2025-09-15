@@ -1,0 +1,211 @@
+{
+  "auth": [
+    {
+      "test": "User Registration",
+      "status": 400,
+      "working": false,
+      "message": "Missing required fields",
+      "hasToken": false
+    },
+    {
+      "test": "User Login",
+      "status": 401,
+      "working": false,
+      "hasToken": false
+    }
+  ],
+  "packages": [
+    {
+      "test": "Package API",
+      "status": 200,
+      "working": true,
+      "packageCount": 3,
+      "packages": [
+        {
+          "id": "silver",
+          "name": "Silver Package",
+          "basePrice": 2999,
+          "gst": 539.82,
+          "finalPrice": 3538.82,
+          "features": {
+            "courses": [
+              "Basic Trading Course",
+              "Market Analysis Basics"
+            ],
+            "support": "24/7 Chat Support",
+            "validity": "6 months",
+            "webinars": "Monthly webinars",
+            "materials": "Digital materials included"
+          },
+          "commissionRates": {
+            "direct": 15,
+            "indirect": 5
+          },
+          "isActive": true,
+          "createdAt": "2025-09-14T10:52:03.049Z"
+        },
+        {
+          "id": "gold",
+          "name": "Gold Package",
+          "basePrice": 4999,
+          "gst": 899.82,
+          "finalPrice": 5898.82,
+          "features": {
+            "courses": [
+              "Advanced Trading Course",
+              "Technical Analysis",
+              "Risk Management"
+            ],
+            "support": "24/7 Phone & Chat Support",
+            "validity": "12 months",
+            "webinars": "Weekly webinars",
+            "materials": "Digital + Physical materials",
+            "mentorship": "1-on-1 monthly sessions"
+          },
+          "commissionRates": {
+            "direct": 15,
+            "indirect": 5
+          },
+          "isActive": true,
+          "createdAt": "2025-09-14T10:52:03.715Z"
+        },
+        {
+          "id": "platinum",
+          "name": "Platinum Package",
+          "basePrice": 9999,
+          "gst": 1799.82,
+          "finalPrice": 11798.82,
+          "features": {
+            "courses": [
+              "Complete Trading Mastery",
+              "Advanced Strategies",
+              "Portfolio Management",
+              "Options Trading"
+            ],
+            "support": "Dedicated account manager",
+            "validity": "24 months",
+            "webinars": "Daily market analysis",
+            "community": "Exclusive trader community access",
+            "exclusive": "VIP trading signals",
+            "materials": "Premium physical kit + Digital access",
+            "mentorship": "Weekly 1-on-1 sessions"
+          },
+          "commissionRates": {
+            "direct": 15,
+            "indirect": 5
+          },
+          "isActive": true,
+          "createdAt": "2025-09-14T10:52:04.359Z"
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "test": "Packages Page",
+      "path": "/packages",
+      "status": 200,
+      "working": true,
+      "hasContent": true,
+      "hasReact": true,
+      "hasError": true,
+      "critical": true
+    },
+    {
+      "test": "Login Page",
+      "path": "/auth/login",
+      "status": 200,
+      "working": true,
+      "hasContent": true,
+      "hasReact": true,
+      "hasError": true,
+      "critical": true
+    },
+    {
+      "test": "Register Page",
+      "path": "/auth/register",
+      "status": 200,
+      "working": true,
+      "hasContent": true,
+      "hasReact": true,
+      "hasError": true,
+      "critical": true
+    },
+    {
+      "test": "Dashboard Page",
+      "path": "/dashboard",
+      "status": 200,
+      "working": true,
+      "hasContent": true,
+      "hasReact": true,
+      "hasError": true,
+      "critical": false
+    },
+    {
+      "test": "Referrals Page",
+      "path": "/referrals",
+      "status": 404,
+      "working": false,
+      "hasContent": true,
+      "hasReact": true,
+      "hasError": true,
+      "critical": false
+    }
+  ],
+  "referrals": [
+    {
+      "test": "Referrals API",
+      "path": "/api/referrals",
+      "status": 500,
+      "working": false,
+      "requiresAuth": false,
+      "hasData": false
+    },
+    {
+      "test": "Dashboard Stats",
+      "path": "/api/dashboard/stats",
+      "status": 401,
+      "working": true,
+      "requiresAuth": true,
+      "hasData": false
+    },
+    {
+      "test": "User Profile",
+      "path": "/api/user/profile",
+      "status": 500,
+      "working": false,
+      "requiresAuth": false,
+      "hasData": false
+    }
+  ],
+  "dashboard": [],
+  "frontend": [
+    {
+      "test": "Frontend Data Fetching",
+      "status": 200,
+      "working": true,
+      "hasPackageData": false,
+      "hasPricing": true,
+      "hasInteractivity": true
+    }
+  ],
+  "overall": {
+    "total": 12,
+    "working": 7,
+    "score": 58,
+    "issues": [
+      "Registration: 400",
+      "Login: 401",
+      "Referrals API: 500",
+      "User Profile: 500",
+      "Referrals Page: 404"
+    ],
+    "summary": {
+      "packages": 1,
+      "auth": 0,
+      "pages": 0.8,
+      "referrals": 0.3333333333333333,
+      "frontend": 1
+    }
+  }
+}

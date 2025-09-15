@@ -1,17 +1,82 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { IndianRupee, TrendingUp, Calendar, Download } from 'lucide-react'
+import { IndianRupee, TrendingUp, Calendar, Download, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth'
 import { formatCurrency } from '@/lib/utils'
+import { authenticatedFetch } from '@/lib/auth-utils'
+import { toast } from 'sonner'
+
+interface EarningsData {
+  affiliate: {
+    referralCode: string
+    commissionRate: number
+    totalEarnings: number
+  }
+  earnings: {
+    totalEarnings: number
+    pendingEarnings: number
+    paidEarnings: number
+  }
+  commissions: Array<{
+    id: string
+    amount: number
+    type: string
+    status: string
+    createdAt: string
+    transaction: any
+  }>
+  referrals: Array<{
+    id: string
+    referredUser: {
+      name: string
+      email: string
+      joinedAt: string
+      totalPurchases: number
+    }
+    createdAt: string
+  }>
+  stats: {
+    totalReferrals: number
+    activeReferrals: number
+    totalCommissions: number
+  }
+}
 
 export default function EarningsPage() {
   const { user, loading } = useAuth()
+  const [earningsData, setEarningsData] = useState<EarningsData | null>(null)
+  const [dataLoading, setDataLoading] = useState(true)
 
-  if (loading) {
+  const fetchEarningsData = async () => {
+    try {
+      setDataLoading(true)
+      const response = await authenticatedFetch('/api/dashboard/earnings')
+      const data = await response.json()
+      
+      if (data.success) {
+        setEarningsData(data.data)
+      } else {
+        toast.error('Failed to load earnings data')
+      }
+    } catch (error) {
+      console.error('Error fetching earnings:', error)
+      toast.error('Failed to load earnings data')
+    } finally {
+      setDataLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (user && !loading) {
+      fetchEarningsData()
+    }
+  }, [user, loading])
+
+  if (loading || dataLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
@@ -51,7 +116,7 @@ export default function EarningsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatCurrency((user?.affiliate?.totalDirectEarnings || 0) + (user?.affiliate?.totalIndirectEarnings || 0))}
+                {formatCurrency(earningsData?.earnings.totalEarnings || 0)}
               </div>
               <p className="text-xs text-muted-foreground">All time earnings</p>
             </CardContent>
@@ -64,22 +129,22 @@ export default function EarningsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatCurrency(user?.affiliate?.currentBalance || 0)}
+                {formatCurrency(earningsData?.earnings.pendingEarnings || 0)}
               </div>
-              <p className="text-xs text-muted-foreground">Ready for withdrawal</p>
+              <p className="text-xs text-muted-foreground">Pending earnings</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Withdrawn</CardTitle>
+              <CardTitle className="text-sm font-medium">Paid Earnings</CardTitle>
               <Download className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {formatCurrency(user?.affiliate?.totalWithdrawn || 0)}
+                {formatCurrency(earningsData?.earnings.paidEarnings || 0)}
               </div>
-              <p className="text-xs text-muted-foreground">Lifetime withdrawals</p>
+              <p className="text-xs text-muted-foreground">Successfully paid out</p>
             </CardContent>
           </Card>
         </div>
@@ -91,15 +156,46 @@ export default function EarningsPage() {
             <CardDescription>Your commission earnings and transaction history</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-12 text-gray-500">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <IndianRupee className="w-8 h-8 text-gray-400" />
+            {earningsData?.commissions && earningsData.commissions.length > 0 ? (
+              <div className="space-y-4">
+                {earningsData.commissions.map((commission) => (
+                  <div key={commission.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <IndianRupee className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{commission.type} Commission</p>
+                        <p className="text-sm text-gray-500">
+                          {new Date(commission.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-green-600">
+                        +{formatCurrency(commission.amount)}
+                      </p>
+                      <p className={`text-xs capitalize ${
+                        commission.status === 'paid' ? 'text-green-600' : 
+                        commission.status === 'pending' ? 'text-yellow-600' : 'text-gray-500'
+                      }`}>
+                        {commission.status}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <p className="text-sm">No earnings yet</p>
-              <p className="text-xs text-gray-400 mt-1">
-                Start referring friends to earn commissions!
-              </p>
-            </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <IndianRupee className="w-8 h-8 text-gray-400" />
+                </div>
+                <p className="text-sm">No earnings yet</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Start referring friends to earn commissions!
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>

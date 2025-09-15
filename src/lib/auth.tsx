@@ -2,17 +2,36 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { prisma } from '@/lib/prisma'
-import { 
-  AuthContextType, 
-  User, 
-  LoginCredentials, 
-  RegisterData, 
-  KYCData,
-  PackageType,
-  UserRole 
-} from '@/types'
-import { generateReferralCode, validatePAN } from '@/lib/utils'
+import { User as SupabaseUser } from '@supabase/supabase-js'
+
+interface User {
+  id: string
+  email: string
+  name?: string
+  phone?: string
+  created_at?: string
+}
+
+interface LoginCredentials {
+  email: string
+  password: string
+}
+
+interface RegisterData {
+  email: string
+  password: string
+  name: string
+  phone?: string
+}
+
+interface AuthContextType {
+  user: User | null
+  loading: boolean
+  signIn: (credentials: LoginCredentials) => Promise<{ error?: string }>
+  signUp: (data: RegisterData) => Promise<{ error?: string; success?: boolean }>
+  signOut: () => Promise<void>
+  refreshUser: () => Promise<void>
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -28,7 +47,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
-          await loadUser(session.user.id)
+          setUser({
+            id: session.user.id,
+            email: session.user.email!,
+            name: session.user.user_metadata?.name,
+            phone: session.user.user_metadata?.phone,
+            created_at: session.user.created_at
+          })
         } else {
           setUser(null)
         }
@@ -43,7 +68,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
-        await loadUser(session.user.id)
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          name: session.user.user_metadata?.name,
+          phone: session.user.user_metadata?.phone,
+          created_at: session.user.created_at
+        })
       }
     } catch (error) {
       console.error('Error getting session:', error)
@@ -52,33 +83,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const loadUser = async (supabaseId: string) => {
+  const signIn = async (credentials: LoginCredentials): Promise<{ error?: string }> => {
     try {
-      const response = await fetch('/api/auth/user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ supabaseId })
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password
       })
-      
-      if (response.ok) {
-        const userData = await response.json()
-        setUser(userData)
-      }
-    } catch (error) {
-      console.error('Error loading user:', error)
-    }
-  }
 
-  const signIn = async (credentials: LoginCredentials) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword(credentials)
-      if (error) return { error: error.message }
-
-      // Wait for user data to be loaded before returning success
-      let attempts = 0
-      while (!user && attempts < 10) {
-        await new Promise(resolve => setTimeout(resolve, 100))
-        attempts++
+      if (error) {
+        return { error: error.message }
       }
 
       return {}
@@ -87,11 +100,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signUp = async (data: RegisterData) => {
+  const signUp = async (data: RegisterData): Promise<{ error?: string; success?: boolean }> => {
     try {
-      console.log('Starting signup process...', { email: data.email, name: data.name })
-      
-      // Sign up with Supabase Auth first
+      // Create user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -103,55 +114,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       })
 
-      console.log('Supabase auth result:', { authData: !!authData.user, authError })
-      
       if (authError) {
-        console.error('Supabase auth error:', authError)
         return { error: authError.message }
       }
-      
+
       if (!authData.user) {
-        console.error('No user returned from Supabase')
         return { error: 'Failed to create user account' }
       }
 
-      console.log('Creating user profile via API...')
-      
-      // Create user profile via API
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          supabaseId: authData.user.id,
-          email: data.email,
-          name: data.name,
-          phone: data.phone,
-          referralCode: data.referralCode
-        })
-      })
-
-      console.log('API response status:', response.status)
-      
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('API error response:', errorText)
-
-        let errorData
-        try {
-          errorData = JSON.parse(errorText)
-        } catch {
-          errorData = { error: errorText }
-        }
-
-        return { error: errorData.error || 'Failed to create user profile' }
-      }
-      
-      const result = await response.json()
-      console.log('User created successfully:', result)
-      
-      return { success: true, data: result }
+      return { success: true }
     } catch (error) {
-      console.error('Unexpected error during signup:', error)
+      console.error('Registration error:', error)
       return { error: 'An unexpected error occurred during registration' }
     }
   }
@@ -165,43 +138,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const updateKYC = async (data: KYCData) => {
-    try {
-      if (!validatePAN(data.panCard)) {
-        return { error: 'Invalid PAN card format' }
-      }
-
-      const response = await fetch('/api/auth/kyc', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        return { error: errorData.error || 'Failed to update KYC' }
-      }
-
-      await refreshUser()
-      return {}
-    } catch (error) {
-      return { error: 'An unexpected error occurred' }
-    }
-  }
-
   const refreshUser = async () => {
-    const { data: { user: supabaseUser } } = await supabase.auth.getUser()
-    if (supabaseUser) {
-      await loadUser(supabaseUser.id)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          name: session.user.user_metadata?.name,
+          phone: session.user.user_metadata?.phone,
+          created_at: session.user.created_at
+        })
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error)
     }
-  }
-
-  const isAdmin = () => {
-    return user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN
-  }
-
-  const isSuperAdmin = () => {
-    return user?.role === UserRole.SUPER_ADMIN
   }
 
   const value: AuthContextType = {
@@ -210,10 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signOut,
-    updateKYC,
-    refreshUser,
-    isAdmin,
-    isSuperAdmin
+    refreshUser
   }
 
   return (

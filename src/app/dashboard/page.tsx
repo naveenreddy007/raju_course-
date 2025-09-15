@@ -9,12 +9,20 @@ import {
   IndianRupee, 
   BookOpen,
   Award,
-  Eye
+  Eye,
+  Share2,
+  Copy,
+  ExternalLink,
+  Clock,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/lib/auth'
 import { formatCurrency } from '@/lib/utils'
+import { toast } from 'sonner'
+import { authenticatedFetch } from '@/lib/auth-utils';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -43,7 +51,7 @@ export default function DashboardPage() {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch('/api/dashboard/stats')
+      const response = await authenticatedFetch('/api/dashboard/stats')
       const data = await response.json()
 
       if (data.success) {
@@ -53,6 +61,17 @@ export default function DashboardPage() {
       console.error('Error fetching dashboard data:', error)
     } finally {
       setDataLoading(false)
+    }
+  }
+
+  const copyReferralLink = async () => {
+    if (dashboardData?.affiliate?.referralLink) {
+      try {
+        await navigator.clipboard.writeText(dashboardData.affiliate.referralLink)
+        toast.success('Referral link copied to clipboard!')
+      } catch (error) {
+        toast.error('Failed to copy referral link')
+      }
     }
   }
 
@@ -77,17 +96,29 @@ export default function DashboardPage() {
 
   // Use real data from API or fallback to basic stats
   const stats = dashboardData?.stats || {
-    totalEarnings: (user?.affiliate?.totalDirectEarnings || 0) + (user?.affiliate?.totalIndirectEarnings || 0),
-    directEarnings: user?.affiliate?.totalDirectEarnings || 0,
-    indirectEarnings: user?.affiliate?.totalIndirectEarnings || 0,
+    totalEarnings: 0,
+    directEarnings: 0,
+    indirectEarnings: 0,
+    pendingEarnings: 0,
     totalReferrals: 0,
     activeReferrals: 0,
+    directReferrals: 0,
+    indirectReferrals: 0,
     coursesCompleted: 0,
-    currentBalance: user?.affiliate?.currentBalance || 0
+    currentBalance: 0,
+    totalWithdrawn: 0,
+    packagesPurchased: 0
   }
 
   // Use real activities from API
   const recentActivities = dashboardData?.recentActivities || []
+  const referralStats = dashboardData?.referralStats || {
+    totalClicks: 0,
+    conversionRate: 0,
+    topPerformingPackage: null,
+    packageStats: {}
+  }
+  const affiliate = dashboardData?.affiliate || null
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -121,7 +152,7 @@ export default function DashboardPage() {
               <CardContent>
                 <div className="text-2xl font-bold">{formatCurrency(stats.totalEarnings)}</div>
                 <p className="text-xs text-muted-foreground">
-                  {stats.totalEarnings > 0 ? '+' : ''}0% from last month
+                  Current Balance: {formatCurrency(stats.currentBalance)}
                 </p>
               </CardContent>
             </Card>
@@ -130,14 +161,24 @@ export default function DashboardPage() {
           <motion.div variants={fadeInUp}>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Direct Earnings</CardTitle>
+                <CardTitle className="text-sm font-medium">Commission Breakdown</CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(stats.directEarnings)}</div>
-                <p className="text-xs text-muted-foreground">
-                  From {stats.totalReferrals} direct referrals
-                </p>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-600">Direct:</span>
+                    <span className="font-semibold">{formatCurrency(stats.directEarnings)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-blue-600">Indirect:</span>
+                    <span className="font-semibold">{formatCurrency(stats.indirectEarnings)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-orange-600">Pending:</span>
+                    <span className="font-semibold">{formatCurrency(stats.pendingEarnings)}</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </motion.div>
@@ -145,13 +186,17 @@ export default function DashboardPage() {
           <motion.div variants={fadeInUp}>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Referrals</CardTitle>
+                <CardTitle className="text-sm font-medium">Referral Network</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.activeReferrals}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats.totalReferrals} total referrals
+                <div className="text-2xl font-bold">{stats.totalReferrals}</div>
+                <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                  <span>Direct: {stats.directReferrals}</span>
+                  <span>Indirect: {stats.indirectReferrals}</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stats.activeReferrals} active purchasers
                 </p>
               </CardContent>
             </Card>
@@ -160,18 +205,66 @@ export default function DashboardPage() {
           <motion.div variants={fadeInUp}>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Courses Completed</CardTitle>
-                <BookOpen className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Performance</CardTitle>
+                <Award className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.coursesCompleted}</div>
+                <div className="text-2xl font-bold">{referralStats.conversionRate}%</div>
                 <p className="text-xs text-muted-foreground">
-                  Out of 10 available courses
+                  Conversion Rate
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {referralStats.totalClicks} total clicks
                 </p>
               </CardContent>
             </Card>
           </motion.div>
         </motion.div>
+
+        {/* Referral Link Section */}
+        {affiliate && (
+          <motion.div variants={fadeInUp} className="mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Share2 className="w-5 h-5" />
+                  Your Referral Link
+                </CardTitle>
+                <CardDescription>
+                  Share this link to earn commissions on referrals
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                  <code className="flex-1 text-sm text-gray-700 truncate">
+                    {affiliate.referralLink}
+                  </code>
+                  <Button
+                    onClick={copyReferralLink}
+                    size="sm"
+                    variant="outline"
+                    className="flex-shrink-0"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    asChild
+                    size="sm"
+                    variant="outline"
+                    className="flex-shrink-0"
+                  >
+                    <a href={affiliate.referralLink} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  </Button>
+                </div>
+                <div className="mt-3 text-sm text-gray-600">
+                  <strong>Referral Code:</strong> {affiliate.referralCode}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Recent Activity */}
@@ -198,13 +291,29 @@ export default function DashboardPage() {
                              activity.type === 'referral' ? <Users className="w-4 h-4" /> :
                              <Award className="w-4 h-4" />}
                           </div>
-                          <div>
+                          <div className="flex-1">
                             <p className="text-sm font-medium">{activity.description}</p>
-                            <p className="text-xs text-gray-500">{activity.date}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-xs text-gray-500">{activity.date}</p>
+                              {activity.status && (
+                                <div className={`flex items-center gap-1 text-xs ${
+                                  activity.status === 'PAID' ? 'text-green-600' :
+                                  activity.status === 'PENDING' ? 'text-orange-600' :
+                                  'text-gray-600'
+                                }`}>
+                                  {activity.status === 'PAID' ? <CheckCircle className="w-3 h-3" /> :
+                                   activity.status === 'PENDING' ? <Clock className="w-3 h-3" /> :
+                                   <AlertCircle className="w-3 h-3" />}
+                                  {activity.status}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                         {activity.amount > 0 && (
-                          <span className="text-sm font-semibold text-green-600">
+                          <span className={`text-sm font-semibold ${
+                            activity.status === 'PAID' ? 'text-green-600' : 'text-orange-600'
+                          }`}>
                             +{formatCurrency(activity.amount)}
                           </span>
                         )}
@@ -238,27 +347,27 @@ export default function DashboardPage() {
               <CardContent>
                 <div className="space-y-3">
                   <Button asChild className="w-full justify-start" variant="outline">
-                    <Link href="/dashboard/referrals">
-                      <Eye className="w-4 h-4 mr-2" />
-                      View Referral Link
+                    <Link href="/packages">
+                      <Award className="w-4 h-4 mr-2" />
+                      Browse Packages
                     </Link>
                   </Button>
                   <Button asChild className="w-full justify-start" variant="outline">
-                    <Link href="/dashboard/earnings">
+                    <Link href="/dashboard/commissions">
                       <TrendingUp className="w-4 h-4 mr-2" />
-                      Check Commission Details
+                      Commission History
                     </Link>
                   </Button>
                   <Button asChild className="w-full justify-start" variant="outline">
-                    <Link href="/dashboard/courses">
-                      <BookOpen className="w-4 h-4 mr-2" />
-                      Continue Learning
+                    <Link href="/dashboard/referrals">
+                      <Users className="w-4 h-4 mr-2" />
+                      Referral Network
                     </Link>
                   </Button>
                   <Button asChild className="w-full justify-start" variant="outline">
-                    <Link href="/dashboard/earnings">
+                    <Link href="/dashboard/payouts">
                       <IndianRupee className="w-4 h-4 mr-2" />
-                      Request Withdrawal
+                      Request Payout
                     </Link>
                   </Button>
                 </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { 
@@ -12,7 +12,8 @@ import {
   Search,
   BookOpen,
   Award,
-  CheckCircle
+  CheckCircle,
+  Loader2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,18 +36,62 @@ const staggerChildren = {
   }
 }
 
-// Real courses - will be fetched from API
-const courses = []
+interface Course {
+  id: string
+  title: string
+  slug: string
+  description: string
+  category: string
+  level: string
+  price: number
+  duration: number
+  instructorId: string
+  isPublished: boolean
+  packageTypes: string[]
+  createdAt: string
+  updatedAt: string
+  _count: {
+    modules: number
+    enrollments: number
+  }
+}
 
 const categories = ['All', 'Marketing', 'Sales', 'Finance', 'Leadership', 'Business']
 const levels = ['All', 'Beginner', 'Intermediate', 'Advanced']
 const packages = ['All', 'SILVER', 'GOLD', 'PLATINUM']
 
 export default function CoursesPage() {
+  const [courses, setCourses] = useState<Course[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [selectedLevel, setSelectedLevel] = useState('All')
   const [selectedPackage, setSelectedPackage] = useState('All')
+
+  // Fetch courses from API
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch('/api/courses?limit=50')
+        const data = await response.json()
+        
+        if (data.success) {
+          setCourses(data.data)
+        } else {
+          setError('Failed to load courses')
+        }
+      } catch (err) {
+        setError('Failed to load courses')
+        console.error('Error fetching courses:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCourses()
+  }, [])
 
   // Filter courses based on search and filters
   const filteredCourses = courses.filter(course => {
@@ -55,7 +100,7 @@ export default function CoursesPage() {
     const matchesCategory = selectedCategory === 'All' || course.category === selectedCategory
     const matchesLevel = selectedLevel === 'All' || course.level === selectedLevel
     const matchesPackage = selectedPackage === 'All' || 
-                          course.packageTypes.includes(selectedPackage as PackageType)
+                          course.packageTypes.includes(selectedPackage)
     
     return matchesSearch && matchesCategory && matchesLevel && matchesPackage
   })
@@ -114,7 +159,7 @@ export default function CoursesPage() {
                 {categories.map(category => (
                   <SelectItem key={category} value={category}>{category}</SelectItem>
                 ))}
-              </SelectContent>
+                </SelectContent>
             </Select>
 
             <Select value={selectedLevel} onValueChange={setSelectedLevel}>
@@ -147,28 +192,54 @@ export default function CoursesPage() {
         </p>
       </motion.div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <span className="ml-2 text-gray-600">Loading courses...</span>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="text-center py-12">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
+            <p className="text-red-600 font-medium">{error}</p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="outline" 
+              className="mt-4"
+            >
+              Try Again
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Course Grid */}
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-        variants={staggerChildren}
-        initial="initial"
-        animate="animate"
-      >
-        {filteredCourses.map((course, index) => (
-          <motion.div key={course.id} variants={fadeInUp}>
-            <Card className="h-full hover:shadow-lg transition-all duration-300 group">
+      {!loading && !error && (
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          variants={staggerChildren}
+          initial="initial"
+          animate="animate"
+        >
+          {filteredCourses.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">No courses found</h3>
+              <p className="text-gray-500">Try adjusting your search or filter criteria.</p>
+            </div>
+          ) : (
+            filteredCourses.map((course, index) => (
+              <motion.div key={course.id} variants={fadeInUp}>
+                <Card className="h-full hover:shadow-lg transition-all duration-300 group">
               {/* Course Thumbnail */}
               <div className="relative overflow-hidden rounded-t-lg">
                 <div className="w-full h-48 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                   <PlayCircle className="w-16 h-16 text-white/80 group-hover:text-white transition-colors" />
                 </div>
-                {course.isPopular && (
-                  <div className="absolute top-4 left-4">
-                    <span className="bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                      Popular
-                    </span>
-                  </div>
-                )}
+
                 <div className="absolute top-4 right-4">
                   <span className="bg-black/50 text-white px-2 py-1 rounded text-xs">
                     {formatDuration(course.duration)}
@@ -182,12 +253,12 @@ export default function CoursesPage() {
                     <CardTitle className="text-lg line-clamp-2 group-hover:text-primary transition-colors">
                       {course.title}
                     </CardTitle>
-                    <p className="text-sm text-gray-500 mt-1">by {course.instructor}</p>
+                    <p className="text-sm text-gray-500 mt-1">Level: {course.level}</p>
                   </div>
                 </div>
                 
                 <CardDescription className="line-clamp-2">
-                  {course.shortDescription}
+                  {course.description}
                 </CardDescription>
               </CardHeader>
 
@@ -195,16 +266,15 @@ export default function CoursesPage() {
                 {/* Course Stats */}
                 <div className="flex items-center justify-between mb-4 text-sm text-gray-600">
                   <div className="flex items-center">
-                    <Star className="w-4 h-4 text-yellow-400 mr-1" />
-                    <span className="font-medium">{course.rating}</span>
-                  </div>
-                  <div className="flex items-center">
                     <Users className="w-4 h-4 mr-1" />
-                    <span>{course.studentsCount.toLocaleString()}</span>
+                    <span>{course._count.enrollments} students</span>
                   </div>
                   <div className="flex items-center">
                     <BookOpen className="w-4 h-4 mr-1" />
-                    <span>{course.modules} modules</span>
+                    <span>{course._count.modules} modules</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-medium">{formatCurrency(course.price)}</span>
                   </div>
                 </div>
 
@@ -226,29 +296,16 @@ export default function CoursesPage() {
 
                 {/* Action Button */}
                 <Button asChild className="w-full">
-                  <Link href={`/courses/${course.id}`}>
+                  <Link href={`/courses/${course.slug}`}>
                     <PlayCircle className="w-4 h-4 mr-2" />
                     Start Learning
                   </Link>
                 </Button>
               </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </motion.div>
-
-      {/* Empty State */}
-      {filteredCourses.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center py-12"
-        >
-          <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No courses available yet</h3>
-          <p className="text-gray-600 mb-4">
-            Courses will be added soon. Check back later for premium learning content!
-          </p>
+                </Card>
+              </motion.div>
+            ))
+          )}
         </motion.div>
       )}
     </div>

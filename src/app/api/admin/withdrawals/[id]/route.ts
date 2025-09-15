@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { checkAdminAuth } from '@/lib/admin-auth'
+import { requireAuth } from '@/lib/api-utils-simple'
 import { prisma } from '@/lib/prisma'
 import { WithdrawalStatus, TransactionType, TransactionStatus } from '@/types'
 
@@ -8,12 +8,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Check admin authentication
-    const { authorized, user, error } = await checkAdminAuth(request)
-    
-    if (!authorized || !user) {
-      return NextResponse.json({ error: error || 'Admin access required' }, { status: 401 })
-    }
+    const { user } = await requireAuth(request);
 
     const { status, adminNotes, paymentDetails } = await request.json()
     const withdrawalId = params.id
@@ -129,12 +124,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Check admin authentication
-    const { authorized, user, error } = await checkAdminAuth(request)
-    
-    if (!authorized || !user) {
-      return NextResponse.json({ error: error || 'Admin access required' }, { status: 401 })
-    }
+    const { user } = await requireAuth(request);
 
     const withdrawalId = params.id
 

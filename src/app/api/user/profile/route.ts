@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/api-utils-simple';
+import { requireAuth, AuthError } from '@/lib/api-utils-simple';
 
 // GET /api/user/profile - Get authenticated user's profile
 export async function GET(request: NextRequest) {
   try {
-    const { user } = await requireAuth(request);
+    const user = await requireAuth(request);
 
     // Get user with related data
     const userProfile = await prisma.user.findUnique({
@@ -54,6 +54,12 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode }
+      );
+    }
     console.error('Error fetching user profile:', error);
     return NextResponse.json(
       { error: 'Failed to fetch user profile' },
@@ -65,7 +71,7 @@ export async function GET(request: NextRequest) {
 // PUT /api/user/profile - Update authenticated user's profile
 export async function PUT(request: NextRequest) {
   try {
-    const { user } = await requireAuth(request);
+    const user = await requireAuth(request);
     const body = await request.json();
 
     // Validate allowed fields for update
@@ -115,6 +121,12 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.statusCode }
+      );
+    }
     console.error('Error updating user profile:', error);
     return NextResponse.json(
       { error: 'Failed to update user profile' },

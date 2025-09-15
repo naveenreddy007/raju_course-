@@ -1,66 +1,147 @@
-import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import jwt from 'jsonwebtoken';
+import { createClient } from '@supabase/supabase-js'
 
-export class APIError extends Error {
-  constructor(
-    message: string,
-    public statusCode: number = 500,
-    public code?: string
-  ) {
-    super(message);
-    this.name = 'APIError';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+// Create Supabase client with service role for server-side operations
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+export interface User {
+  id: string
+  email: string
+  name: string
+  role: 'USER' | 'ADMIN' | 'SUPER_ADMIN'
+  isActive: boolean
+  supabaseId: string
+}
+
+export interface AuthResult {
+  success: boolean
+  user?: User
+  token?: string
+  message?: string
+}
+
+// Verify JWT token and get user
+export async function requireAuth(token: string): Promise<User | null> {
+  try {
+    if (!token) {
+      return null
+    }
+
+    // Remove 'Bearer ' prefix if present
+    const cleanToken = token.replace('Bearer ', '')
+    
+    // Verify Supabase JWT token
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(cleanToken)
+    
+    if (authError || !authUser) {
+      console.error('Auth verification error:', authError)
+      return null
+    }
+
+    // Get user from our users table using supabaseId
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, email, name, role, isActive, supabaseId')
+      .eq('supabaseId', authUser.id)
+      .single()
+
+    if (userError || !user || !user.isActive) {
+      console.error('User lookup error:', userError)
+      return null
+    }
+
+    return user
+  } catch (error) {
+    console.error('Auth error:', error)
+    return null
   }
 }
 
-export async function requireAuth(request: NextRequest) {
+// Login user
+export async function loginUser(email: string, password: string): Promise<AuthResult> {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new APIError('Authorization header required', 401, 'UNAUTHORIZED');
+    // Sign in with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    })
+
+    if (authError || !authData.user) {
+      return { success: false, message: 'Invalid credentials' }
     }
 
-    const token = authHeader.substring(7);
-    
-    // Try to decode as Supabase JWT first (no verification needed as it comes from Supabase)
-    let decoded: any;
-    try {
-      // Decode without verification for Supabase tokens
-      const payload = token.split('.')[1];
-      decoded = JSON.parse(Buffer.from(payload, 'base64').toString());
-    } catch {
-      // Fallback to JWT verification for custom tokens
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
-    }
-    
-    // Use 'sub' field for Supabase tokens or 'userId' for custom tokens
-    const userIdentifier = decoded.sub || decoded.userId;
-    
-    const user = await prisma.user.findUnique({
-      where: decoded.sub ? { supabaseId: userIdentifier } : { id: userIdentifier },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        isActive: true
-      }
-    });
+    // Get user from our users table
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, email, name, role, isActive, supabaseId')
+      .eq('supabaseId', authData.user.id)
+      .single()
 
-    if (!user) {
-      throw new APIError('User not found', 404, 'USER_NOT_FOUND');
+    if (userError || !user) {
+      return { success: false, message: 'User not found' }
     }
 
     if (!user.isActive) {
-      throw new APIError('Account deactivated', 401, 'ACCOUNT_DEACTIVATED');
+      return { success: false, message: 'Account is inactive' }
     }
 
-    return { user };
-  } catch (error) {
-    if (error instanceof APIError) throw error;
-    if (error instanceof jwt.JsonWebTokenError) {
-      throw new APIError('Invalid token', 401, 'INVALID_TOKEN');
+    // Update last login
+    await supabase
+      .from('users')
+      .update({ lastLoginAt: new Date().toISOString() })
+      .eq('id', user.id)
+
+    return {
+      success: true,
+      user,
+      token: authData.session?.access_token
     }
-    throw new APIError('Authentication failed', 401, 'AUTH_FAILED');
+  } catch (error) {
+    console.error('Login error:', error)
+    return { success: false, message: 'Login failed' }
+  }
+}
+
+// Register user
+export async function registerUser(email: string, password: string, name: string): Promise<AuthResult> {
+  try {
+    // Sign up with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password
+    })
+
+    if (authError || !authData.user) {
+      return { success: false, message: authError?.message || 'Registration failed' }
+    }
+
+    // Create user in our users table
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .insert({
+        email,
+        name,
+        role: 'USER',
+        supabaseId: authData.user.id,
+        emailVerified: authData.user.email_confirmed_at ? true : false
+      })
+      .select('id, email, name, role, isActive, supabaseId')
+      .single()
+
+    if (userError) {
+      console.error('User creation error:', userError)
+      return { success: false, message: 'Failed to create user profile' }
+    }
+
+    return {
+      success: true,
+      user,
+      token: authData.session?.access_token
+    }
+  } catch (error) {
+    console.error('Registration error:', error)
+    return { success: false, message: 'Registration failed' }
   }
 }

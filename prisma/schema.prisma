@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,390 +8,333 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// User model with KYC verification
 model User {
-  id                String   @id @default(cuid())
-  email             String   @unique
-  phone             String?  @unique
-  name              String
-  avatar            String?
-  
-  // Role and Permissions
-  role              UserRole @default(USER)
-  isActive          Boolean  @default(true)
-  
-  // KYC Information
-  panCard           String?  @unique
-  aadharCard        String?
-  kycStatus         KYCStatus @default(PENDING)
-  kycDocuments      Json?
-  kycVerifiedAt     DateTime?
-  
-  // Authentication
-  supabaseId        String   @unique
-  emailVerified     Boolean  @default(false)
-  phoneVerified     Boolean  @default(false)
-  
-  // Timestamps
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  lastLoginAt       DateTime?
-  
-  // Relations
-  affiliate         Affiliate?
-  transactions      Transaction[]
-  enrollments       Enrollment[]
-  bankDetails       BankDetail[]
-  notifications     Notification[]
-  subscriptions     NewsletterSubscription[]
-  blogPosts         BlogPost[]
-  referrals         Referral[] @relation("ReferredUser")
-  withdrawalRequests WithdrawalRequest[]
-  processedWithdrawals WithdrawalRequest[] @relation("ProcessedWithdrawals")
-  
+  id                   String                   @id @default(cuid())
+  email                String                   @unique
+  phone                String?                  @unique
+  name                 String
+  avatar               String?
+  role                 UserRole                 @default(USER)
+  isActive             Boolean                  @default(true)
+  panCard              String?                  @unique
+  aadharCard           String?
+  kycStatus            KYCStatus                @default(PENDING)
+  kycDocuments         Json?
+  kycVerifiedAt        DateTime?
+  supabaseId           String                   @unique
+  emailVerified        Boolean                  @default(false)
+  phoneVerified        Boolean                  @default(false)
+  referralCode         String?                  @unique
+  referredBy           String?
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  lastLoginAt          DateTime?
+  affiliate            Affiliate?
+  bankDetails          BankDetail[]
+  blogPosts            BlogPost[]
+  commissions          Commission[]
+  enrollments          Enrollment[]
+  subscriptions        NewsletterSubscription[]
+  notifications        Notification[]
+  packagePurchases     PackagePurchase[]
+  payoutRequests       PayoutRequest[]
+  referrals            Referral[]               @relation("ReferredUser")
+  transactions         Transaction[]
+  processedWithdrawals WithdrawalRequest[]      @relation("ProcessedWithdrawals")
+  withdrawalRequests   WithdrawalRequest[]
+
   @@map("users")
 }
 
-// Affiliate/Referral System
+model Package {
+  id              String            @id
+  name            String
+  basePrice       Float
+  gst             Float
+  finalPrice      Float
+  features        Json
+  commissionRates Json
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  purchases       PackagePurchase[]
+
+  @@map("packages")
+}
+
+model PackagePurchase {
+  id                String         @id @default(cuid())
+  userId            String
+  packageId         String
+  amount            Float
+  status            PurchaseStatus @default(PENDING)
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  purchasedAt       DateTime       @default(now())
+  expiresAt         DateTime?
+  createdAt         DateTime       @default(now())
+  commissions       Commission[]
+  package           Package        @relation(fields: [packageId], references: [id])
+  user              User           @relation(fields: [userId], references: [id])
+
+  @@map("package_purchases")
+}
+
 model Affiliate {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  referralCode    String   @unique
-  parentId        String?
-  parent          Affiliate? @relation("AffiliateHierarchy", fields: [parentId], references: [id])
-  children        Affiliate[] @relation("AffiliateHierarchy")
-  
-  // Package Information
-  packageType     PackageType
-  packagePrice    Float
-  purchaseDate    DateTime
-  
-  // Commission Information
-  commissionRate  Float @default(0.10)
-  
-  // Commission Stats
-  totalDirectEarnings    Float @default(0)
-  totalIndirectEarnings  Float @default(0)
-  totalWithdrawn         Float @default(0)
-  currentBalance         Float @default(0)
-  
-  // Status
-  isActive        Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relations
+  id                    String       @id @default(cuid())
+  userId                String       @unique
+  referralCode          String       @unique
+  parentId              String?
+  packageType           PackageType
+  packagePrice          Float
+  purchaseDate          DateTime
+  commissionRate        Float        @default(0.10)
+  totalDirectEarnings   Float        @default(0)
+  totalIndirectEarnings Float        @default(0)
+  totalWithdrawn        Float        @default(0)
+  currentBalance        Float        @default(0)
+  isActive              Boolean      @default(true)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  parent                Affiliate?   @relation("AffiliateHierarchy", fields: [parentId], references: [id])
+  children              Affiliate[]  @relation("AffiliateHierarchy")
+  user                  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   directCommissions     Commission[] @relation("DirectCommissions")
   indirectCommissions   Commission[] @relation("IndirectCommissions")
-  referrals            Referral[]
-  
+  referrals             Referral[]
+
   @@map("affiliates")
 }
 
-// Commission Tracking
 model Commission {
-  id              String   @id @default(cuid())
-  
-  // Commission details
-  amount          Float
-  commissionType  CommissionType
-  level           Int // 1 for direct, 2 for indirect
-  
-  // Related affiliate and transaction
-  affiliateId     String
-  affiliate       Affiliate @relation("DirectCommissions", fields: [affiliateId], references: [id])
-  
-  fromAffiliateId String?
-  fromAffiliate   Affiliate? @relation("IndirectCommissions", fields: [fromAffiliateId], references: [id])
-  
-  transactionId   String
-  transaction     Transaction @relation(fields: [transactionId], references: [id])
-  
-  // Status
-  status          CommissionStatus @default(PENDING)
-  paidAt          DateTime?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  id                String           @id @default(cuid())
+  userId            String
+  sourceUserId      String
+  packagePurchaseId String
+  amount            Float
+  type              CommissionType
+  level             Int
+  affiliateId       String?
+  fromAffiliateId   String?
+  transactionId     String?
+  status            CommissionStatus @default(PENDING)
+  paidAt            DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  affiliate         Affiliate?       @relation("DirectCommissions", fields: [affiliateId], references: [id])
+  fromAffiliate     Affiliate?       @relation("IndirectCommissions", fields: [fromAffiliateId], references: [id])
+  packagePurchase   PackagePurchase  @relation(fields: [packagePurchaseId], references: [id])
+  transaction       Transaction?     @relation(fields: [transactionId], references: [id])
+  user              User             @relation(fields: [userId], references: [id])
+
   @@map("commissions")
 }
 
-// Transaction Management
+model PayoutRequest {
+  id             String       @id @default(cuid())
+  userId         String
+  amount         Float
+  paymentDetails Json
+  status         PayoutStatus @default(PENDING)
+  requestedAt    DateTime     @default(now())
+  processedAt    DateTime?
+  user           User         @relation(fields: [userId], references: [id])
+
+  @@map("payout_requests")
+}
+
 model Transaction {
-  id              String   @id @default(cuid())
+  id              String            @id @default(cuid())
   userId          String
-  user            User     @relation(fields: [userId], references: [id])
-  
-  // Transaction Details
   amount          Float
   type            TransactionType
   status          TransactionStatus @default(PENDING)
-  
-  // Payment Information
   paymentId       String?
   paymentMethod   String?
   gatewayResponse Json?
-  
-  // Metadata
   description     String?
   metadata        Json?
-  
-  // Timestamps
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
   processedAt     DateTime?
-  
-  // Relations
   commissions     Commission[]
   enrollment      Enrollment?
-  
+  user            User              @relation(fields: [userId], references: [id])
+
   @@map("transactions")
 }
 
-// Referral Tracking
 model Referral {
-  id              String   @id @default(cuid())
-  affiliateId     String
-  affiliate       Affiliate @relation(fields: [affiliateId], references: [id])
-  
-  referredUserId  String
-  referredUser    User     @relation("ReferredUser", fields: [referredUserId], references: [id])
-  
-  // Commission earned from this referral
-  commissionEarned Float  @default(0)
-  
-  createdAt       DateTime @default(now())
-  
+  id               String    @id @default(cuid())
+  affiliateId      String
+  referredUserId   String
+  commissionEarned Float     @default(0)
+  createdAt        DateTime  @default(now())
+  affiliate        Affiliate @relation(fields: [affiliateId], references: [id])
+  referredUser     User      @relation("ReferredUser", fields: [referredUserId], references: [id])
+
   @@unique([affiliateId, referredUserId])
   @@map("referrals")
 }
 
-// Course Management
 model Course {
-  id              String   @id @default(cuid())
-  title           String
-  description     String?
+  id               String         @id @default(cuid())
+  title            String
+  description      String?
   shortDescription String?
-  
-  // Content
-  videoUrl        String?
-  thumbnailUrl    String?
-  duration        Int? // in minutes
-  
-  // Pricing
-  price           Float
-  packageTypes    PackageType[] // Which packages can access this course
-  
-  // Status
-  isActive        Boolean  @default(true)
-  isPublished     Boolean  @default(false)
-  
-  // SEO
-  slug            String   @unique
-  metaTitle       String?
-  metaDescription String?
-  
-  // Timestamps
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  publishedAt     DateTime?
-  
-  // Relations
-  enrollments     Enrollment[]
-  modules         CourseModule[]
-  
+  videoUrl         String?
+  thumbnailUrl     String?
+  duration         Int?
+  price            Float
+  packageTypes     PackageType[]
+  isActive         Boolean        @default(true)
+  isPublished      Boolean        @default(false)
+  slug             String         @unique
+  metaTitle        String?
+  metaDescription  String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  publishedAt      DateTime?
+  modules          CourseModule[]
+  enrollments      Enrollment[]
+
   @@map("courses")
 }
 
-// Course Modules/Lessons
 model CourseModule {
-  id              String   @id @default(cuid())
-  courseId        String
-  course          Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  
-  title           String
-  description     String?
-  videoUrl        String?
-  duration        Int? // in minutes
-  order           Int
-  
-  isActive        Boolean  @default(true)
-  isFree          Boolean  @default(false) // Some modules can be free preview
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relations
-  progress        UserProgress[]
-  
+  id          String         @id @default(cuid())
+  courseId    String
+  title       String
+  description String?
+  videoUrl    String?
+  duration    Int?
+  order       Int
+  isActive    Boolean        @default(true)
+  isFree      Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  course      Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress    UserProgress[]
+
   @@map("course_modules")
 }
 
-// User Course Enrollment
 model Enrollment {
-  id              String   @id @default(cuid())
+  id              String           @id @default(cuid())
   userId          String
-  user            User     @relation(fields: [userId], references: [id])
-  
   courseId        String
-  course          Course   @relation(fields: [courseId], references: [id])
-  
-  transactionId   String   @unique
-  transaction     Transaction @relation(fields: [transactionId], references: [id])
-  
-  // Progress
-  progressPercent Float    @default(0)
+  transactionId   String           @unique
+  progressPercent Float            @default(0)
   completedAt     DateTime?
   certificateUrl  String?
-  
-  // Status
   status          EnrollmentStatus @default(ACTIVE)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  course          Course           @relation(fields: [courseId], references: [id])
+  transaction     Transaction      @relation(fields: [transactionId], references: [id])
+  user            User             @relation(fields: [userId], references: [id])
+
   @@unique([userId, courseId])
   @@map("enrollments")
 }
 
-// User Progress Tracking
 model UserProgress {
-  id              String   @id @default(cuid())
+  id              String       @id @default(cuid())
   userId          String
   moduleId        String
-  module          CourseModule @relation(fields: [moduleId], references: [id])
-  
-  // Progress
-  watchedDuration Int      @default(0) // in seconds
-  isCompleted     Boolean  @default(false)
+  watchedDuration Int          @default(0)
+  isCompleted     Boolean      @default(false)
   completedAt     DateTime?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  module          CourseModule @relation(fields: [moduleId], references: [id])
+
   @@unique([userId, moduleId])
   @@map("user_progress")
 }
 
-// Blog System
 model BlogPost {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   title           String
-  slug            String   @unique
+  slug            String    @unique
   content         String
   excerpt         String?
-  
-  // Media
   featuredImage   String?
-  
-  // Author
   authorId        String
-  author          User     @relation(fields: [authorId], references: [id])
-  
-  // SEO
   metaTitle       String?
   metaDescription String?
-  
-  // Status
-  isPublished     Boolean  @default(false)
+  isPublished     Boolean   @default(false)
   publishedAt     DateTime?
-  
-  // Stats
-  viewCount       Int      @default(0)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  viewCount       Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  author          User      @relation(fields: [authorId], references: [id])
+
   @@map("blog_posts")
 }
 
-// Newsletter System
 model NewsletterSubscription {
-  id              String   @id @default(cuid())
-  email           String   @unique
-  userId          String?
-  user            User?    @relation(fields: [userId], references: [id])
-  
-  isActive        Boolean  @default(true)
-  subscribedAt    DateTime @default(now())
-  unsubscribedAt  DateTime?
-  
+  id             String    @id @default(cuid())
+  email          String    @unique
+  userId         String?
+  isActive       Boolean   @default(true)
+  subscribedAt   DateTime  @default(now())
+  unsubscribedAt DateTime?
+  user           User?     @relation(fields: [userId], references: [id])
+
   @@map("newsletter_subscriptions")
 }
 
-// Bank Details for Payouts
 model BankDetail {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id])
-  
-  bankName        String
-  accountNumber   String
-  ifscCode        String
-  accountHolderName String
-  
-  isVerified      Boolean  @default(false)
-  isDefault       Boolean  @default(false)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relations
+  id                 String              @id @default(cuid())
+  userId             String
+  bankName           String
+  accountNumber      String
+  ifscCode           String
+  accountHolderName  String
+  isVerified         Boolean             @default(false)
+  isDefault          Boolean             @default(false)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  user               User                @relation(fields: [userId], references: [id])
   withdrawalRequests WithdrawalRequest[]
-  
+
   @@map("bank_details")
 }
 
-// Notification System
 model Notification {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id])
-  
-  title           String
-  message         String
-  type            NotificationType
-  
-  isRead          Boolean  @default(false)
-  readAt          DateTime?
-  
-  // Metadata
-  actionUrl       String?
-  metadata        Json?
-  
-  createdAt       DateTime @default(now())
-  
+  id        String           @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  actionUrl String?
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id])
+
   @@map("notifications")
 }
 
-// Withdrawal Request System
 model WithdrawalRequest {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id])
-  
-  amount          Float
-  bankDetailId    String?
-  bankDetail      BankDetail? @relation(fields: [bankDetailId], references: [id])
-  
-  status          WithdrawalStatus @default(PENDING)
-  adminNotes      String?
-  
-  // Admin who processed
-  processedById   String?
-  processedBy     User?    @relation("ProcessedWithdrawals", fields: [processedById], references: [id])
-  processedAt     DateTime?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  id            String           @id @default(cuid())
+  userId        String
+  amount        Float
+  bankDetailId  String?
+  status        WithdrawalStatus @default(PENDING)
+  adminNotes    String?
+  processedById String?
+  processedAt   DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  bankDetail    BankDetail?      @relation(fields: [bankDetailId], references: [id])
+  processedBy   User?            @relation("ProcessedWithdrawals", fields: [processedById], references: [id])
+  user          User             @relation(fields: [userId], references: [id])
+
   @@map("withdrawal_requests")
 }
 
-// Enums
 enum UserRole {
   USER
   ADMIN
@@ -424,8 +364,8 @@ enum PackageType {
 }
 
 enum CommissionType {
-  DIRECT_REFERRAL
-  INDIRECT_REFERRAL
+  DIRECT
+  INDIRECT
   BONUS
   WITHDRAWAL
 }
@@ -467,4 +407,18 @@ enum NotificationType {
   PAYMENT_SUCCESS
   PAYMENT_FAILED
   GENERAL
+}
+
+enum PurchaseStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  REJECTED
 }

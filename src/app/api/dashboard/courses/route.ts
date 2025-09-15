@@ -1,76 +1,75 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/api-utils-simple';
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { requireAuth } from '@/lib/api-utils-simple'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function GET(request: NextRequest) {
   try {
-    const { user } = await requireAuth(request);
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, error: 'Authorization header required' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const user = await requireAuth(token);
+    
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid or expired token' },
+        { status: 401 }
+      );
+    }
+
     const userId = user.id;
 
     // Get user's enrolled courses
-    const enrollments = await prisma.enrollment.findMany({
-      where: {
-        userId,
-        status: 'ACTIVE'
-      },
-      include: {
-        course: {
-          include: {
-            _count: {
-              select: {
-                modules: true
-              }
-            }
-          }
-        },
-        transaction: {
-          select: {
-            amount: true,
-            createdAt: true
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
+    const { data: enrollments, error: enrollmentError } = await supabase
+      .from('enrollments')
+      .select(`
+        *,
+        courses:course_id (
+          *,
+          lessons (*)
+        ),
+        progress:course_progress (*)
+      `)
+      .eq('user_id', userId);
+
+    if (enrollmentError) {
+      console.error('Error fetching enrollments:', enrollmentError);
+      return NextResponse.json({ error: 'Failed to fetch courses' }, { status: 500 });
+    }
+
+    // Process courses with progress
+    const coursesWithProgress = (enrollments || []).map((enrollment) => {
+      const course = enrollment.courses;
+      const progress = enrollment.progress || [];
+      
+      const totalLessons = course?.lessons?.length || 0;
+      const completedLessons = progress.filter((p: any) => p.completed).length;
+      const progressPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+
+      return {
+        id: course?.id,
+        title: course?.title,
+        description: course?.description,
+        thumbnail: course?.thumbnail,
+        totalLessons,
+        completedLessons,
+        progressPercentage,
+        enrolledAt: enrollment.created_at,
+        lastAccessed: enrollment.last_accessed_at,
+        purchaseAmount: enrollment.amount || 0,
+        purchaseDate: enrollment.created_at,
+      };
     });
-
-    // Get progress for each course
-    const coursesWithProgress = await Promise.all(
-      enrollments.map(async (enrollment) => {
-        const totalModules = enrollment.course._count.modules;
-        
-        // Get completed modules count
-        const completedModules = await prisma.userProgress.count({
-          where: {
-            userId,
-            module: {
-              courseId: enrollment.courseId
-            },
-            isCompleted: true
-          }
-        });
-
-        const progressPercentage = totalModules > 0 
-          ? Math.round((completedModules / totalModules) * 100)
-          : 0;
-
-        return {
-          id: enrollment.id,
-          enrolledAt: enrollment.createdAt,
-          course: {
-            id: enrollment.course.id,
-            title: enrollment.course.title,
-            description: enrollment.course.description,
-            level: enrollment.course.level,
-            category: enrollment.course.category,
-            duration: enrollment.course.duration,
-            totalModules,
-            completedModules,
-            progressPercentage
-          },
-          transaction: enrollment.transaction
-        };
-      })
-    );
 
     return NextResponse.json({
       success: true,

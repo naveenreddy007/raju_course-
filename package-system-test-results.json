@@ -1,0 +1,160 @@
+{
+  "summary": {
+    "total": 21,
+    "passed": 21,
+    "failed": 0,
+    "percentage": 100
+  },
+  "details": {
+    "database": {
+      "passed": 4,
+      "failed": 0,
+      "tests": [
+        {
+          "test": "Package Count",
+          "status": "PASS",
+          "message": "Found 3 packages",
+          "timestamp": "2025-09-14T11:14:25.787Z"
+        },
+        {
+          "test": "Silver Package Package Exists",
+          "status": "PASS",
+          "message": "Package found",
+          "timestamp": "2025-09-14T11:14:25.787Z"
+        },
+        {
+          "test": "Gold Package Package Exists",
+          "status": "PASS",
+          "message": "Package found",
+          "timestamp": "2025-09-14T11:14:25.788Z"
+        },
+        {
+          "test": "Platinum Package Package Exists",
+          "status": "PASS",
+          "message": "Package found",
+          "timestamp": "2025-09-14T11:14:25.788Z"
+        }
+      ]
+    },
+    "api": {
+      "passed": 2,
+      "failed": 0,
+      "tests": [
+        {
+          "test": "GET /api/packages",
+          "status": "PASS",
+          "message": "Status: 200, Count: undefined",
+          "timestamp": "2025-09-14T11:14:32.076Z"
+        },
+        {
+          "test": "Purchase Auth Protection",
+          "status": "PASS",
+          "message": "Correctly requires authentication",
+          "timestamp": "2025-09-14T11:14:32.679Z"
+        }
+      ]
+    },
+    "pricing": {
+      "passed": 3,
+      "failed": 0,
+      "tests": [
+        {
+          "test": "Silver Package Price",
+          "status": "PASS",
+          "message": "₹3538.82",
+          "timestamp": "2025-09-14T11:14:25.787Z"
+        },
+        {
+          "test": "Gold Package Price",
+          "status": "PASS",
+          "message": "₹5898.82",
+          "timestamp": "2025-09-14T11:14:25.788Z"
+        },
+        {
+          "test": "Platinum Package Price",
+          "status": "PASS",
+          "message": "₹11798.82",
+          "timestamp": "2025-09-14T11:14:25.788Z"
+        }
+      ]
+    },
+    "commission": {
+      "passed": 12,
+      "failed": 0,
+      "tests": [
+        {
+          "test": "Silver Package Direct Commission",
+          "status": "PASS",
+          "message": "15%",
+          "timestamp": "2025-09-14T11:14:25.787Z"
+        },
+        {
+          "test": "Silver Package Indirect Commission",
+          "status": "PASS",
+          "message": "5%",
+          "timestamp": "2025-09-14T11:14:25.787Z"
+        },
+        {
+          "test": "Gold Package Direct Commission",
+          "status": "PASS",
+          "message": "15%",
+          "timestamp": "2025-09-14T11:14:25.788Z"
+        },
+        {
+          "test": "Gold Package Indirect Commission",
+          "status": "PASS",
+          "message": "5%",
+          "timestamp": "2025-09-14T11:14:25.788Z"
+        },
+        {
+          "test": "Platinum Package Direct Commission",
+          "status": "PASS",
+          "message": "15%",
+          "timestamp": "2025-09-14T11:14:25.788Z"
+        },
+        {
+          "test": "Platinum Package Indirect Commission",
+          "status": "PASS",
+          "message": "5%",
+          "timestamp": "2025-09-14T11:14:25.788Z"
+        },
+        {
+          "test": "Silver Package Direct Calculation",
+          "status": "PASS",
+          "message": "₹531",
+          "timestamp": "2025-09-14T11:14:32.990Z"
+        },
+        {
+          "test": "Silver Package Indirect Calculation",
+          "status": "PASS",
+          "message": "₹177",
+          "timestamp": "2025-09-14T11:14:32.990Z"
+        },
+        {
+          "test": "Gold Package Direct Calculation",
+          "status": "PASS",
+          "message": "₹885",
+          "timestamp": "2025-09-14T11:14:32.990Z"
+        },
+        {
+          "test": "Gold Package Indirect Calculation",
+          "status": "PASS",
+          "message": "₹295",
+          "timestamp": "2025-09-14T11:14:32.990Z"
+        },
+        {
+          "test": "Platinum Package Direct Calculation",
+          "status": "PASS",
+          "message": "₹1770",
+          "timestamp": "2025-09-14T11:14:32.990Z"
+        },
+        {
+          "test": "Platinum Package Indirect Calculation",
+          "status": "PASS",
+          "message": "₹590",
+          "timestamp": "2025-09-14T11:14:32.990Z"
+        }
+      ]
+    }
+  }
+}

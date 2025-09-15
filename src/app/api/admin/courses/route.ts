@@ -5,14 +5,6 @@ import { requireAuth } from '@/lib/api-utils-simple';
 export async function GET(request: NextRequest) {
   try {
     const { user } = await requireAuth(request);
-    
-    // Check if user is admin
-    if (user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
-        { status: 403 }
-      );
-    }
 
     const courses = await prisma.course.findMany({
       include: {
@@ -43,14 +35,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { user } = await requireAuth(request);
-    
-    // Check if user is admin
-    if (user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
-        { status: 403 }
-      );
-    }
 
     const body = await request.json();
     const {

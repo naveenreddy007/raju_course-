@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { checkAdminAuth } from '@/lib/admin-auth'
+import { requireAuth } from '@/lib/api-utils-simple'
 import { prisma } from '@/lib/prisma'
 import { WithdrawalStatus } from '@/types'
 
 export async function GET(request: NextRequest) {
   try {
-    // Check admin authentication
-    const { authorized, user, error } = await checkAdminAuth(request)
-    
-    if (!authorized || !user) {
-      return NextResponse.json({ error: error || 'Admin access required' }, { status: 401 })
-    }
+    const { user } = await requireAuth(request);
 
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')

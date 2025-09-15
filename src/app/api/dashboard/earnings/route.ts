@@ -1,18 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/api-utils-simple';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function GET(request: NextRequest) {
   try {
-    const { user } = await requireAuth(request);
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, error: 'Authorization header required' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const user = await requireAuth(token);
+    
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid or expired token' },
+        { status: 401 }
+      );
+    }
+
     const userId = user.id;
 
     // Get user's affiliate data
-    const affiliate = await prisma.affiliate.findUnique({
-      where: { userId }
-    });
+    const { data: affiliate, error: affiliateError } = await supabase
+      .from('affiliates')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
 
-    if (!affiliate) {
+    if (!affiliate || affiliateError) {
       return NextResponse.json({
         success: true,
         data: {
@@ -31,93 +55,98 @@ export async function GET(request: NextRequest) {
     }
 
     // Get commission data
-    const [commissions, referrals] = await Promise.all([
-      prisma.commission.findMany({
-        where: { affiliateId: affiliate.id },
-        include: {
-          transaction: {
-            include: {
-              user: {
-                select: { name: true, email: true }
-              }
-            }
-          }
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 20
-      }),
-      prisma.referral.findMany({
-        where: { affiliateId: affiliate.id },
-        include: {
-          referredUser: {
-            select: {
-              name: true,
-              email: true,
-              createdAt: true,
-              _count: {
-                select: {
-                  transactions: true
-                }
-              }
-            }
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      })
-    ]);
+    const { data: commissions, error: commissionsError } = await supabase
+      .from('commissions')
+      .select(`
+        *,
+        transactions (
+          id,
+          amount,
+          description,
+          users (
+            name,
+            email
+          )
+        )
+      `)
+      .eq('affiliate_id', affiliate.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    // Get referral data
+    const { data: referrals, error: referralsError } = await supabase
+      .from('referrals')
+      .select(`
+        *,
+        users!referrals_referred_user_id_fkey (
+          name,
+          email,
+          created_at
+        )
+      `)
+      .eq('affiliate_id', affiliate.id)
+      .order('created_at', { ascending: false });
+
+    if (commissionsError || referralsError) {
+      console.error('Error fetching commissions or referrals:', commissionsError, referralsError);
+      return NextResponse.json(
+        { error: 'Failed to fetch earnings data' },
+        { status: 500 }
+      );
+    }
 
     // Calculate earnings
-    const totalEarnings = commissions.reduce((sum, comm) => sum + comm.amount, 0);
-    const pendingEarnings = commissions
-      .filter(comm => comm.status === 'PENDING')
+    const totalEarnings = (commissions || []).reduce((sum, comm) => sum + comm.amount, 0);
+    const pendingEarnings = (commissions || [])
+      .filter(comm => comm.status === 'pending')
       .reduce((sum, comm) => sum + comm.amount, 0);
-    const paidEarnings = commissions
-      .filter(comm => comm.status === 'PAID')
+    const paidEarnings = (commissions || [])
+      .filter(comm => comm.status === 'paid')
       .reduce((sum, comm) => sum + comm.amount, 0);
 
     // Calculate stats
     const stats = {
-      totalReferrals: referrals.length,
-      activeReferrals: referrals.filter(ref => 
-        ref.referredUser._count.transactions > 0
+      totalReferrals: (referrals || []).length,
+      activeReferrals: (referrals || []).filter(ref => 
+        ref.users && ref.users.created_at
       ).length,
-      totalCommissions: commissions.length
+      totalCommissions: (commissions || []).length
     };
 
     // Format commission data
-    const formattedCommissions = commissions.map(comm => ({
+    const formattedCommissions = (commissions || []).map(comm => ({
       id: comm.id,
       amount: comm.amount,
       type: comm.type,
       status: comm.status,
-      createdAt: comm.createdAt,
-      transaction: {
-        id: comm.transaction.id,
-        amount: comm.transaction.amount,
-        description: comm.transaction.description,
-        user: comm.transaction.user
-      }
+      createdAt: comm.created_at,
+      transaction: comm.transactions ? {
+        id: comm.transactions.id,
+        amount: comm.transactions.amount,
+        description: comm.transactions.description,
+        user: comm.transactions.users
+      } : null
     }));
 
     // Format referral data
-    const formattedReferrals = referrals.map(ref => ({
+    const formattedReferrals = (referrals || []).map(ref => ({
       id: ref.id,
       referredUser: {
-        name: ref.referredUser.name,
-        email: ref.referredUser.email,
-        joinedAt: ref.referredUser.createdAt,
-        totalPurchases: ref.referredUser._count.transactions
+        name: ref.users?.name,
+        email: ref.users?.email,
+        joinedAt: ref.users?.created_at,
+        totalPurchases: 0 // We'll need to calculate this separately if needed
       },
-      createdAt: ref.createdAt
+      createdAt: ref.created_at
     }));
 
     return NextResponse.json({
       success: true,
       data: {
         affiliate: {
-          referralCode: affiliate.referralCode,
-          commissionRate: affiliate.commissionRate,
-          totalEarnings: affiliate.totalEarnings
+          referralCode: affiliate.referral_code,
+          commissionRate: affiliate.commission_rate,
+          totalEarnings: affiliate.total_earnings
         },
         earnings: {
           totalEarnings,

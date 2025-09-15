@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth } from '@/lib/api-utils-simple'
+import { requireAuth, AuthError } from '@/lib/api-utils-simple'
 
 export async function GET(request: NextRequest) {
   try {
-    const { user } = await requireAuth(request)
+    const user = await requireAuth(request)
 
     // Get user's affiliate data
     const affiliate = await prisma.affiliate.findUnique({
@@ -68,6 +68,12 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.statusCode }
+      )
+    }
     console.error('Referral API error:', error)
     return NextResponse.json({
       success: false,
@@ -79,7 +85,7 @@ export async function GET(request: NextRequest) {
 // Generate referral link for sharing
 export async function POST(request: NextRequest) {
   try {
-    const { user } = await requireAuth(request)
+    const user = await requireAuth(request)
     const { platform } = await request.json()
 
     // Get user's affiliate data
@@ -114,6 +120,12 @@ export async function POST(request: NextRequest) {
       }
     })
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.statusCode }
+      )
+    }
     console.error('Referral sharing API error:', error)
     return NextResponse.json({
       success: false,
