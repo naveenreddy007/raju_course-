@@ -13,7 +13,8 @@ import {
   BookOpen,
   Award,
   CheckCircle,
-  Loader2
+  Loader2,
+  Lock
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +22,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
 import { PackageType } from '@/types'
+import { createClient } from '@supabase/supabase-js'
+import { toast } from 'sonner'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -56,6 +64,19 @@ interface Course {
   }
 }
 
+interface UserPackage {
+  id: string
+  packageType: string
+  name: string
+}
+
+interface EnrollmentStatus {
+  [courseId: string]: {
+    enrolled: boolean
+    progress?: number
+  }
+}
+
 const categories = ['All', 'Marketing', 'Sales', 'Finance', 'Leadership', 'Business']
 const levels = ['All', 'Beginner', 'Intermediate', 'Advanced']
 const packages = ['All', 'SILVER', 'GOLD', 'PLATINUM']
@@ -68,6 +89,45 @@ export default function CoursesPage() {
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [selectedLevel, setSelectedLevel] = useState('All')
   const [selectedPackage, setSelectedPackage] = useState('All')
+  const [user, setUser] = useState<any>(null)
+  const [userPackage, setUserPackage] = useState<UserPackage | null>(null)
+  const [enrollmentStatus, setEnrollmentStatus] = useState<EnrollmentStatus>({})
+  const [enrollingCourses, setEnrollingCourses] = useState<Set<string>>(new Set())
+
+  // Check user authentication and package
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+      
+      if (user) {
+        // Fetch user's active package
+        const { data: packageData } = await supabase
+          .from('package_purchases')
+          .select(`
+            id,
+            packages!inner(
+              id,
+              name,
+              packageType
+            )
+          `)
+          .eq('userId', user.id)
+          .eq('status', 'active')
+          .single()
+        
+        if (packageData) {
+          setUserPackage({
+            id: packageData.packages.id,
+            name: packageData.packages.name,
+            packageType: packageData.packages.packageType
+          })
+        }
+      }
+    }
+    
+    checkUser()
+  }, [])
 
   // Fetch courses from API
   useEffect(() => {
@@ -79,6 +139,29 @@ export default function CoursesPage() {
         
         if (data.success) {
           setCourses(data.data)
+          
+          // If user is logged in, check enrollment status for all courses
+          if (user) {
+            const enrollmentPromises = data.data.map(async (course: Course) => {
+              const response = await fetch(`/api/courses/enroll?courseId=${course.id}&userId=${user.id}`)
+              const enrollmentData = await response.json()
+              return {
+                courseId: course.id,
+                enrolled: enrollmentData.enrolled,
+                progress: enrollmentData.enrollment?.progressPercent || 0
+              }
+            })
+            
+            const enrollmentResults = await Promise.all(enrollmentPromises)
+            const statusMap: EnrollmentStatus = {}
+            enrollmentResults.forEach(result => {
+              statusMap[result.courseId] = {
+                enrolled: result.enrolled,
+                progress: result.progress
+              }
+            })
+            setEnrollmentStatus(statusMap)
+          }
         } else {
           setError('Failed to load courses')
         }
@@ -91,7 +174,7 @@ export default function CoursesPage() {
     }
 
     fetchCourses()
-  }, [])
+  }, [user])
 
   // Filter courses based on search and filters
   const filteredCourses = courses.filter(course => {
@@ -109,6 +192,74 @@ export default function CoursesPage() {
     const hours = Math.floor(minutes / 60)
     const mins = minutes % 60
     return `${hours}h ${mins > 0 ? `${mins}m` : ''}`
+  }
+
+  // Check if user can access course based on package
+  const canAccessCourse = (course: Course) => {
+    if (!userPackage) return false
+    
+    const packageHierarchy = {
+      'basic': 1,
+      'standard': 2,
+      'premium': 3
+    }
+    
+    const userLevel = packageHierarchy[userPackage.packageType.toLowerCase() as keyof typeof packageHierarchy] || 0
+    const requiredLevels = course.packageTypes.map(pkg => 
+      packageHierarchy[pkg.toLowerCase() as keyof typeof packageHierarchy] || 0
+    )
+    const minRequiredLevel = Math.min(...requiredLevels)
+    
+    return userLevel >= minRequiredLevel
+  }
+
+  // Handle course enrollment
+  const handleEnroll = async (courseId: string) => {
+    if (!user) {
+      toast.error('Please log in to enroll in courses')
+      return
+    }
+    
+    if (!userPackage) {
+      toast.error('Please purchase a package first to access courses')
+      return
+    }
+    
+    setEnrollingCourses(prev => new Set(prev).add(courseId))
+    
+    try {
+      const response = await fetch('/api/courses/enroll', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          courseId,
+          userId: user.id
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        toast.success('Successfully enrolled in course!')
+        setEnrollmentStatus(prev => ({
+          ...prev,
+          [courseId]: { enrolled: true, progress: 0 }
+        }))
+      } else {
+        toast.error(data.error || 'Failed to enroll in course')
+      }
+    } catch (error) {
+      console.error('Enrollment error:', error)
+      toast.error('Failed to enroll in course')
+    } finally {
+      setEnrollingCourses(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(courseId)
+        return newSet
+      })
+    }
   }
 
   return (
@@ -266,6 +417,10 @@ export default function CoursesPage() {
                 {/* Course Stats */}
                 <div className="flex items-center justify-between mb-4 text-sm text-gray-600">
                   <div className="flex items-center">
+                    <Clock className="w-4 h-4 mr-1" />
+                    <span>{formatDuration(course.duration)}</span>
+                  </div>
+                  <div className="flex items-center">
                     <Users className="w-4 h-4 mr-1" />
                     <span>{course._count.enrollments} students</span>
                   </div>
@@ -273,20 +428,19 @@ export default function CoursesPage() {
                     <BookOpen className="w-4 h-4 mr-1" />
                     <span>{course._count.modules} modules</span>
                   </div>
-                  <div className="flex items-center">
-                    <span className="font-medium">{formatCurrency(course.price)}</span>
-                  </div>
                 </div>
 
                 {/* Package Tags */}
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {course.packageTypes.map(packageType => (
-                    <span 
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {course.packageTypes.map((packageType) => (
+                    <span
                       key={packageType}
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        packageType === 'SILVER' ? 'bg-gray-100 text-gray-700' :
-                        packageType === 'GOLD' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-purple-100 text-purple-700'
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        packageType === 'BASIC'
+                          ? 'bg-blue-100 text-blue-800'
+                          : packageType === 'STANDARD'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-purple-100 text-purple-800'
                       }`}
                     >
                       {packageType}
@@ -294,13 +448,76 @@ export default function CoursesPage() {
                   ))}
                 </div>
 
-                {/* Action Button */}
-                <Button asChild className="w-full">
-                  <Link href={`/courses/${course.slug}`}>
-                    <PlayCircle className="w-4 h-4 mr-2" />
-                    Start Learning
-                  </Link>
-                </Button>
+                {/* Enrollment Status and Actions */}
+                <div className="mt-6">
+                  {!user ? (
+                    <Link href="/auth/login">
+                      <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                        <PlayCircle className="w-4 h-4 mr-2" />
+                        Login to Start Learning
+                      </Button>
+                    </Link>
+                  ) : enrollmentStatus[course.id]?.enrolled ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2 text-green-600">
+                          <CheckCircle className="w-4 h-4" />
+                          Enrolled
+                        </span>
+                        <span className="text-gray-600">
+                          {enrollmentStatus[course.id]?.progress || 0}% Complete
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${enrollmentStatus[course.id]?.progress || 0}%` }}
+                        />
+                      </div>
+                      <Link href={`/courses/${course.slug}`}>
+                        <Button className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700">
+                          <PlayCircle className="w-4 h-4 mr-2" />
+                          Continue Learning
+                        </Button>
+                      </Link>
+                    </div>
+                  ) : !userPackage ? (
+                    <Link href="/packages">
+                      <Button className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700">
+                        <Award className="w-4 h-4 mr-2" />
+                        Get Package to Access
+                      </Button>
+                    </Link>
+                  ) : !canAccessCourse(course) ? (
+                    <div className="space-y-2">
+                      <Button disabled className="w-full bg-gray-400 cursor-not-allowed">
+                        <Lock className="w-4 h-4 mr-2" />
+                        Upgrade Package Required
+                      </Button>
+                      <p className="text-xs text-gray-500 text-center">
+                        This course requires: {course.packageTypes.join(', ')}
+                      </p>
+                    </div>
+                  ) : (
+                    <Button 
+                      onClick={() => handleEnroll(course.id)}
+                      disabled={enrollingCourses.has(course.id)}
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50"
+                    >
+                      {enrollingCourses.has(course.id) ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Enrolling...
+                        </>
+                      ) : (
+                        <>
+                          <PlayCircle className="w-4 h-4 mr-2" />
+                          Enroll Now
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
               </CardContent>
                 </Card>
               </motion.div>

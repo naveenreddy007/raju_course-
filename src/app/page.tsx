@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { 
@@ -14,11 +14,16 @@ import {
   Award,
   Zap,
   CheckCircle,
-  IndianRupee
+  IndianRupee,
+  Copy,
+  Share2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, packagePricing, cn } from '@/lib/utils'
+import { useAuth } from '@/lib/auth'
+import { toast } from 'sonner'
+import { authenticatedFetch } from '@/lib/auth-utils'
 
 const fadeInUp = {
   initial: { opacity: 0, y: 60 },
@@ -113,6 +118,56 @@ const stats = [
 ]
 
 export default function HomePage() {
+  const { user, loading } = useAuth()
+  const [referralData, setReferralData] = useState(null)
+  const [loadingReferral, setLoadingReferral] = useState(false)
+
+  // Fetch referral data for logged-in users
+  useEffect(() => {
+    if (user && !loading) {
+      fetchReferralData()
+    }
+  }, [user, loading])
+
+  const fetchReferralData = async () => {
+    try {
+      setLoadingReferral(true)
+      const response = await authenticatedFetch('/api/referrals/generate', {
+        method: 'POST'
+      })
+      const data = await response.json()
+      if (data.success) {
+        setReferralData(data.affiliate)
+      }
+    } catch (error) {
+      console.error('Error fetching referral data:', error)
+    } finally {
+      setLoadingReferral(false)
+    }
+  }
+
+  const copyReferralLink = async () => {
+    if (referralData?.referralLink) {
+      try {
+        await navigator.clipboard.writeText(referralData.referralLink)
+        toast.success('Referral link copied to clipboard!')
+      } catch (error) {
+        toast.error('Failed to copy referral link')
+      }
+    }
+  }
+
+  const copyReferralCode = async () => {
+    if (referralData?.referralCode) {
+      try {
+        await navigator.clipboard.writeText(referralData.referralCode)
+        toast.success('Referral code copied to clipboard!')
+      } catch (error) {
+        toast.error('Failed to copy referral code')
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -317,6 +372,244 @@ export default function HomePage() {
               </motion.div>
             ))}
           </motion.div>
+        </div>
+      </section>
+
+      {/* Referral Commission Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div 
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Two-Level Commission System
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Earn from your direct referrals and their referrals with our sustainable commission model.
+            </p>
+          </motion.div>
+          
+          <div className="max-w-4xl mx-auto">
+            {/* Commission Flow Diagram */}
+            <motion.div 
+              className="bg-white rounded-lg p-8 shadow-lg mb-12"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Commission Flow</h3>
+                <div className="flex flex-col items-center space-y-6">
+                  {/* You */}
+                  <div className="bg-blue-100 rounded-lg p-4 text-center">
+                    <div className="text-lg font-semibold text-blue-800">YOU</div>
+                  </div>
+                  
+                  {/* Arrow Down */}
+                  <div className="flex items-center">
+                    <div className="w-px h-8 bg-gray-300"></div>
+                  </div>
+                  
+                  {/* Level 1 - Direct Referrals */}
+                  <div className="flex space-x-8">
+                    <div className="bg-green-100 rounded-lg p-4 text-center">
+                      <div className="text-sm font-semibold text-green-800">Direct Referral 1</div>
+                      <div className="text-xs text-green-600 mt-1">(Direct Commission)</div>
+                    </div>
+                    <div className="bg-green-100 rounded-lg p-4 text-center">
+                      <div className="text-sm font-semibold text-green-800">Direct Referral 2</div>
+                      <div className="text-xs text-green-600 mt-1">(Direct Commission)</div>
+                    </div>
+                  </div>
+                  
+                  {/* Arrows Down */}
+                  <div className="flex space-x-8">
+                    <div className="w-px h-8 bg-gray-300"></div>
+                    <div className="w-px h-8 bg-gray-300"></div>
+                  </div>
+                  
+                  {/* Level 2 - Indirect Referrals */}
+                  <div className="flex space-x-8">
+                    <div className="bg-yellow-100 rounded-lg p-4 text-center">
+                      <div className="text-sm font-semibold text-yellow-800">Referral's Referral</div>
+                      <div className="text-xs text-yellow-600 mt-1">(Indirect Commission)</div>
+                    </div>
+                    <div className="bg-yellow-100 rounded-lg p-4 text-center">
+                      <div className="text-sm font-semibold text-yellow-800">Referral's Referral</div>
+                      <div className="text-xs text-yellow-600 mt-1">(Indirect Commission)</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+            
+            {/* Commission Tables */}
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Direct Commission */}
+              <motion.div 
+                className="bg-white rounded-lg p-6 shadow-lg"
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+              >
+                <h4 className="text-xl font-bold text-gray-900 mb-4 text-center">Direct Commission (Level 1)</h4>
+                <div className="space-y-4">
+                  <div className="border rounded-lg p-4">
+                    <div className="font-semibold text-blue-600 mb-2">Silver User Earnings</div>
+                    <div className="text-sm space-y-1">
+                      <div>Silver Referral → ₹1,875</div>
+                      <div>Gold Referral → ₹2,375</div>
+                      <div>Platinum Referral → ₹2,875</div>
+                    </div>
+                  </div>
+                  <div className="border rounded-lg p-4">
+                    <div className="font-semibold text-yellow-600 mb-2">Gold User Earnings</div>
+                    <div className="text-sm space-y-1">
+                      <div>Silver Referral → ₹1,875</div>
+                      <div>Gold Referral → ₹3,375</div>
+                      <div>Platinum Referral → ₹3,875</div>
+                    </div>
+                  </div>
+                  <div className="border rounded-lg p-4">
+                    <div className="font-semibold text-purple-600 mb-2">Platinum User Earnings</div>
+                    <div className="text-sm space-y-1">
+                      <div>Silver Referral → ₹1,875</div>
+                      <div>Gold Referral → ₹3,375</div>
+                      <div>Platinum Referral → ₹5,625</div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+              
+              {/* Indirect Commission */}
+              <motion.div 
+                className="bg-white rounded-lg p-6 shadow-lg"
+                initial={{ opacity: 0, x: 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+              >
+                <h4 className="text-xl font-bold text-gray-900 mb-4 text-center">Indirect Commission (Level 2)</h4>
+                <div className="space-y-4">
+                  <div className="border rounded-lg p-4">
+                    <div className="font-semibold text-blue-600 mb-2">Silver User Earnings</div>
+                    <div className="text-sm space-y-1">
+                      <div>Silver → ₹150</div>
+                      <div>Gold → ₹350</div>
+                      <div>Platinum → ₹400</div>
+                    </div>
+                  </div>
+                  <div className="border rounded-lg p-4">
+                    <div className="font-semibold text-yellow-600 mb-2">Gold User Earnings</div>
+                    <div className="text-sm space-y-1">
+                      <div>Silver → ₹200</div>
+                      <div>Gold → ₹400</div>
+                      <div>Platinum → ₹600</div>
+                    </div>
+                  </div>
+                  <div className="border rounded-lg p-4">
+                    <div className="font-semibold text-purple-600 mb-2">Platinum User Earnings</div>
+                    <div className="text-sm space-y-1">
+                      <div>Silver → ₹200</div>
+                      <div>Gold → ₹500</div>
+                      <div>Platinum → ₹1,000</div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+            
+            {/* Referral Link Section for Logged-in Users */}
+            {user && (
+              <motion.div 
+                className="bg-white rounded-lg p-8 shadow-lg mt-12"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+              >
+                <div className="text-center mb-6">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Your Referral Links</h3>
+                  <p className="text-gray-600">Share these links to start earning commissions</p>
+                </div>
+                
+                {loadingReferral ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : referralData ? (
+                  <div className="space-y-4">
+                    {/* Referral Link */}
+                    <div className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="font-semibold text-gray-700">Referral Link</label>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={copyReferralLink}
+                          className="flex items-center gap-2"
+                        >
+                          <Copy className="w-4 h-4" />
+                          Copy Link
+                        </Button>
+                      </div>
+                      <div className="bg-gray-50 p-3 rounded border text-sm font-mono break-all">
+                        {referralData.referralLink}
+                      </div>
+                    </div>
+                    
+                    {/* Referral Code */}
+                    <div className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="font-semibold text-gray-700">Referral Code</label>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={copyReferralCode}
+                          className="flex items-center gap-2"
+                        >
+                          <Copy className="w-4 h-4" />
+                          Copy Code
+                        </Button>
+                      </div>
+                      <div className="bg-gray-50 p-3 rounded border text-center text-lg font-bold">
+                        {referralData.referralCode}
+                      </div>
+                    </div>
+                    
+                    {/* Quick Actions */}
+                    <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                      <Button className="flex-1" asChild>
+                        <Link href="/dashboard/referrals">
+                          <TrendingUp className="w-4 h-4 mr-2" />
+                          View Referral Dashboard
+                        </Link>
+                      </Button>
+                      <Button variant="outline" className="flex-1" onClick={() => {
+                        if (navigator.share) {
+                          navigator.share({
+                            title: 'Join this amazing learning platform!',
+                            text: 'Start learning and earning with this referral link:',
+                            url: referralData.referralLink
+                          })
+                        } else {
+                          copyReferralLink()
+                        }
+                      }}>
+                        <Share2 className="w-4 h-4 mr-2" />
+                        Share Link
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>Unable to load referral data. Please try refreshing the page.</p>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </div>
         </div>
       </section>
 

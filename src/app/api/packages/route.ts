@@ -1,24 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { createClient } from '@supabase/supabase-js';
 
-const prisma = new PrismaClient();
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 // GET /api/packages - Get all available packages
 export async function GET() {
   try {
-    const packages = await prisma.package.findMany({
-      where: {
-        isActive: true
-      },
-      orderBy: {
-        basePrice: 'asc'
-      }
-    });
+    const { data: packages, error } = await supabase
+      .from('packages')
+      .select('*')
+      .eq('isActive', true)
+      .order('basePrice', { ascending: true });
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to fetch packages'
+        },
+        { status: 500 }
+      );
+    }
+
+    // Transform packages to match frontend expectations
+    const transformedPackages = packages.map(pkg => ({
+      id: pkg.id,
+      name: pkg.name,
+      price: pkg.basePrice,
+      gst: pkg.gst,
+      totalPrice: pkg.finalPrice,
+      features: Array.isArray(pkg.features) ? pkg.features : [],
+      directCommissionRate: pkg.commissionRates?.direct || 10,
+      indirectCommissionRate: pkg.commissionRates?.indirect || 5,
+      isPopular: pkg.name.toLowerCase().includes('gold')
+    }));
 
     return NextResponse.json({
       success: true,
-      data: packages
+      data: transformedPackages
     });
   } catch (error) {
     console.error('Error fetching packages:', error);
@@ -29,19 +52,12 @@ export async function GET() {
       },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
 // POST /api/packages - Create a new package (Admin only)
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
     // Get the authorization header
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
@@ -62,12 +78,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user is admin
-    const dbUser = await prisma.user.findUnique({
-      where: { supabaseId: user.id }
-    });
+    // Check if user is admin using Supabase
+    const { data: dbUser, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('supabase_id', user.id)
+      .single();
 
-    if (!dbUser || dbUser.role !== 'ADMIN') {
+    if (userError || !dbUser || dbUser.role !== 'admin') {
       return NextResponse.json(
         { success: false, error: 'Admin access required' },
         { status: 403 }
@@ -80,33 +98,47 @@ export async function POST(request: NextRequest) {
       description,
       price,
       basePrice,
-      gstAmount,
       features,
       directCommissionRate,
       indirectCommissionRate
     } = body;
 
     // Validate required fields
-    if (!name || !description || !price || !basePrice || !directCommissionRate || !indirectCommissionRate) {
+    if (!name || !description || !basePrice || !directCommissionRate || !indirectCommissionRate) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    const newPackage = await prisma.package.create({
-      data: {
+    const { data: newPackage, error: createError } = await supabase
+      .from('packages')
+      .insert({
         name,
         description,
-        price,
-        basePrice,
-        gstAmount: gstAmount || 0,
+        basePrice: parseFloat(basePrice),
+        gst: Math.round(parseFloat(basePrice) * 0.18),
+        finalPrice: Math.round(parseFloat(basePrice) + (parseFloat(basePrice) * 0.18)),
         features: features || [],
-        directCommissionRate,
-        indirectCommissionRate,
+        commissionRates: {
+          direct: parseFloat(directCommissionRate),
+          indirect: parseFloat(indirectCommissionRate)
+        },
         isActive: true
-      }
-    });
+      })
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('Supabase create error:', createError);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to create package'
+        },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -121,7 +153,5 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

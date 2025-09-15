@@ -26,6 +26,7 @@ const supabase = createClient(
 export default function PackagesPage() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState<number | null>(null);
   const [user, setUser] = useState<any>(null);
   const router = useRouter();
@@ -42,17 +43,19 @@ export default function PackagesPage() {
 
   const fetchPackages = async () => {
     try {
+      setError(null);
       const response = await fetch('/api/packages');
       const data = await response.json();
       
       if (data.success) {
         setPackages(data.data || []);
       } else {
-        console.error('Failed to load packages:', data.error);
+        setError(data.error || 'Failed to load packages');
         setPackages([]);
       }
     } catch (error) {
       console.error('Error fetching packages:', error);
+      setError('Failed to load packages. Please try again.');
       setPackages([]);
     } finally {
       setLoading(false);
@@ -62,7 +65,7 @@ export default function PackagesPage() {
   const handlePurchase = async (packageId: number) => {
     if (!user) {
       toast.error('Please login to purchase a package');
-      router.push('/login');
+      router.push('/auth/login');
       return;
     }
 
@@ -73,7 +76,7 @@ export default function PackagesPage() {
       
       if (!session) {
         toast.error('Please login to continue');
-        router.push('/login');
+        router.push('/auth/login');
         return;
       }
 
@@ -133,6 +136,28 @@ export default function PackagesPage() {
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
           <p className="text-gray-600">Loading packages...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <p className="text-red-600 font-medium mb-4">{error}</p>
+            <button
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                fetchPackages();
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -280,7 +305,7 @@ export default function PackagesPage() {
           </p>
           {!user && (
             <button
-              onClick={() => router.push('/register')}
+              onClick={() => router.push('/auth/register')}
               className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-8 rounded-lg font-semibold transition-colors duration-200"
             >
               Create Account & Get Started

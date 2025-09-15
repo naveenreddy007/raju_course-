@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     const { data: affiliate, error: affiliateError } = await supabase
       .from('affiliates')
       .select('*')
-      .eq('userId', user.id)
+      .eq('user_id', user.id)
       .single();
 
     if (affiliateError && affiliateError.code !== 'PGRST116') {
@@ -71,76 +71,97 @@ export async function GET(request: NextRequest) {
     // Get referrals
     const { data: referrals } = await supabase
       .from('referrals')
-      .select('*, referredUser:users!referrals_referredUserId_fkey(*)')
-      .eq('affiliateId', affiliate.id);
+      .select('*, referredUser:users!referrals_referred_user_id_fkey(*)')
+      .eq('affiliate_id', affiliate.id);
 
     // Get commissions
     const { data: commissions } = await supabase
       .from('commissions')
       .select(`
         *,
-        transaction:transactions!commissions_transactionId_fkey(
+        transaction:transactions!commissions_transaction_id_fkey(
           *,
-          package:packages!transactions_packageId_fkey(*),
-          user:users!transactions_userId_fkey(*)
+          package:packages!transactions_package_id_fkey(*),
+          user:users!transactions_user_id_fkey(*)
         )
       `)
-      .eq('affiliateId', affiliate.id)
-      .order('createdAt', { ascending: false });
+      .eq('affiliate_id', affiliate.id)
+      .order('created_at', { ascending: false });
+
+    // Get user's packages (purchased packages) with package details
+    const { data: packages, error: packagesError } = await supabase
+      .from('package_purchases')
+      .select(`
+        *,
+        package:packages(*)
+      `)
+      .eq('user_id', user.id)
+      .eq('status', 'SUCCESS')
+      .order('created_at', { ascending: false });
+
+    const packageStats = {
+      total: packages?.length || 0,
+      active: packages?.filter(p => p.status === 'SUCCESS').length || 0
+    };
 
     // Get user's transactions
     const { data: userTransactions } = await supabase
       .from('transactions')
       .select('*')
-      .eq('userId', user.id);
+      .eq('user_id', user.id);
 
     // Calculate statistics
+    const totalEarnings = commissions?.reduce((sum, c) => sum + (c.amount || 0), 0) || 0;
+    const totalPackages = userTransactions?.length || 0;
+    const pendingCommissions = commissions?.filter(c => c.status === 'pending').length || 0;
+    const paidCommissions = commissions?.filter(c => c.status === 'paid').length || 0;
+
+    // Calculate detailed earnings
     const allCommissions = commissions || [];
-    const paidCommissions = allCommissions.filter(c => c.status === 'PAID');
-    const pendingCommissions = allCommissions.filter(c => c.status === 'PENDING');
     const directCommissions = allCommissions.filter(c => c.level === 1);
     const indirectCommissions = allCommissions.filter(c => c.level > 1);
 
-    const totalEarnings = paidCommissions.reduce((sum, c) => sum + (c.amount || 0), 0);
-    const directEarnings = directCommissions.filter(c => c.status === 'PAID').reduce((sum, c) => sum + (c.amount || 0), 0);
-    const indirectEarnings = indirectCommissions.filter(c => c.status === 'PAID').reduce((sum, c) => sum + (c.amount || 0), 0);
-    const pendingEarnings = pendingCommissions.reduce((sum, c) => sum + (c.amount || 0), 0);
+    const directEarnings = directCommissions.filter(c => c.status === 'paid').reduce((sum, c) => sum + (c.amount || 0), 0);
+    const indirectEarnings = indirectCommissions.filter(c => c.status === 'paid').reduce((sum, c) => sum + (c.amount || 0), 0);
+    const pendingEarnings = allCommissions.filter(c => c.status === 'pending').reduce((sum, c) => sum + (c.amount || 0), 0);
+    
+    // Calculate available balance
+    const totalWithdrawn = 0; // Would need withdrawal tracking
+    const availableBalance = totalEarnings - totalWithdrawn;
 
     // Calculate referral statistics
     const totalReferrals = referrals?.length || 0;
-    const activeReferrals = totalReferrals; // Simplified for now
-    const directReferrals = totalReferrals;
-    const indirectReferrals = 0;
+    const activeReferrals = (referrals || []).filter(r => r.status === 'active').length;
+    const pendingReferrals = (referrals || []).filter(r => r.status === 'pending').length;
 
-    // Package statistics
+    // Calculate package statistics
+    const activePackages = (userTransactions || []).filter(t => t.status === 'completed').length;
     const packagesPurchased = userTransactions?.length || 0;
 
     // Current balance (simplified)
     const currentBalance = totalEarnings;
-    const totalWithdrawn = 0; // Would need withdrawal tracking
 
-    // Recent activities
-    const recentActivities = allCommissions.slice(0, 10).map(commission => ({
-      id: commission.id,
+    // Combine recent activities
+    const recentCommissions = commissions?.slice(0, 5).map(c => ({
+      id: c.id,
       type: 'commission',
-      description: `Commission from ${commission.transaction?.package?.name || 'package'} purchase`,
-      amount: commission.amount || 0,
-      date: new Date(commission.createdAt).toLocaleDateString(),
-      status: commission.status
-    }));
+      amount: c.amount,
+      description: `Commission from ${c.transaction?.user?.name || 'Unknown'} - ${c.transaction?.package?.name || 'Package'}`,
+      date: c.created_at,
+      status: c.status
+    })) || [];
 
-    // Add referral activities
-    const recentReferrals = (referrals || []).slice(0, 5).map(referral => ({
-      id: `ref-${referral.id}`,
+    const recentReferrals = referrals?.slice(0, 5).map(r => ({
+      id: r.id,
       type: 'referral',
-      description: `New referral: ${referral.referredUser?.name || referral.referredUser?.email || 'User'}`,
       amount: 0,
-      date: new Date(referral.createdAt).toLocaleDateString(),
+      description: `New referral: ${r.referredUser?.name || 'Unknown User'}`,
+      date: r.created_at,
       status: 'completed'
-    }));
+    })) || [];
 
     // Combine activities
-    const allActivities = [...recentActivities, ...recentReferrals]
+    const allActivities = [...recentCommissions, ...recentReferrals]
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 10);
 
@@ -162,31 +183,29 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      stats: {
-        totalEarnings,
-        directEarnings,
-        indirectEarnings,
-        pendingEarnings,
-        totalReferrals,
-        activeReferrals,
-        directReferrals,
-        indirectReferrals,
-        coursesCompleted: 0,
-        currentBalance,
-        totalWithdrawn,
-        packagesPurchased
-      },
-      recentActivities: allActivities,
-      referralStats: {
-        totalClicks: affiliate.totalClicks || 0,
-        conversionRate: Math.round(conversionRate * 100) / 100,
-        topPerformingPackage,
-        packageStats
-      },
-      affiliate: {
-        referralCode: affiliate.referralCode,
-        referralLink: `${process.env.NEXT_PUBLIC_APP_URL}/register?ref=${affiliate.referralCode}`,
-        joinedAt: affiliate.createdAt
+      data: {
+        earnings: {
+          total: totalEarnings,
+          direct: directEarnings,
+          indirect: indirectEarnings,
+          pending: pendingEarnings,
+          available: availableBalance,
+          withdrawn: totalWithdrawn
+        },
+        referrals: {
+          total: totalReferrals,
+          active: activeReferrals,
+          pending: pendingReferrals
+        },
+        packages: packages || [],
+        recentActivities: allActivities,
+        affiliate: affiliate ? {
+          id: affiliate.id,
+          referralCode: affiliate.referral_code,
+          referralLink: `${process.env.NEXT_PUBLIC_APP_URL}/register?ref=${affiliate.referral_code}`,
+          status: affiliate.status,
+          createdAt: affiliate.created_at
+        } : null
       }
     });
 

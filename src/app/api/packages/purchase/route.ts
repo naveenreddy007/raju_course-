@@ -1,43 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { createClient } from '@supabase/supabase-js';
+import { requireAuth } from '@/lib/api-utils-simple';
 
-const prisma = new PrismaClient();
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 // POST /api/packages/purchase - Purchase a package
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    // Authenticate user
+    const { user } = await requireAuth(request);
 
-    // Get the authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json(
-        { success: false, error: 'Authorization header required' },
-        { status: 401 }
-      );
-    }
+    // Get user from Supabase users table
+    const { data: dbUser, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single();
 
-    // Verify the user is authenticated
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid authentication' },
-        { status: 401 }
-      );
-    }
-
-    // Get user from database
-    const dbUser = await prisma.user.findUnique({
-      where: { supabaseId: user.id }
-    });
-
-    if (!dbUser) {
+    if (userError || !dbUser) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
         { status: 404 }
@@ -56,11 +39,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the package details
-    const packageData = await prisma.package.findUnique({
-      where: { id: packageId }
-    });
+    const { data: packageData, error: packageError } = await supabase
+      .from('packages')
+      .select('*')
+      .eq('id', packageId)
+      .eq('isActive', true)
+      .single();
 
-    if (!packageData || !packageData.isActive) {
+    if (packageError || !packageData) {
       return NextResponse.json(
         { success: false, error: 'Package not found or inactive' },
         { status: 404 }
@@ -68,13 +54,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already has this package
-    const existingPurchase = await prisma.packagePurchase.findFirst({
-      where: {
-        userId: dbUser.id,
-        packageId: packageId,
-        status: 'SUCCESS'
-      }
-    });
+    const { data: existingPurchase } = await supabase
+      .from('package_purchases')
+      .select('*')
+      .eq('user_id', dbUser.id)
+      .eq('package_id', packageId)
+      .eq('status', 'SUCCESS')
+      .single();
 
     if (existingPurchase) {
       return NextResponse.json(
@@ -84,29 +70,71 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the package purchase
-    const purchase = await prisma.packagePurchase.create({
-      data: {
-        userId: dbUser.id,
-        packageId: packageId,
-        amount: packageData.price,
-        paymentDetails: paymentDetails || {},
+    const { data: purchase, error: purchaseError } = await supabase
+      .from('package_purchases')
+      .insert({
+        user_id: dbUser.id,
+        package_id: packageId,
+        amount: packageData.finalPrice,
+        payment_details: paymentDetails || {},
         status: 'SUCCESS' // In real implementation, this would be PENDING until payment is verified
+      })
+      .select()
+      .single();
+
+    if (purchaseError) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to create purchase record' },
+        { status: 500 }
+      );
+    }
+
+    // Process commissions for referrers
+    // Get user's referrer if any
+    const { data: affiliate } = await supabase
+      .from('affiliates')
+      .select('*')
+      .eq('user_id', dbUser.id)
+      .single();
+
+    if (affiliate && affiliate.referred_by) {
+      // Create commission for direct referrer
+      const directCommission = (packageData.finalPrice * packageData.commissionRates.direct) / 100;
+      
+      await supabase
+        .from('commissions')
+        .insert({
+          affiliate_id: affiliate.referred_by,
+          referred_user_id: dbUser.id,
+          transaction_id: purchase.id,
+          package_id: packageId,
+          amount: directCommission,
+          commission_type: 'direct',
+          status: 'pending'
+        });
+
+      // Get indirect referrer and create indirect commission
+      const { data: directReferrer } = await supabase
+        .from('affiliates')
+        .select('*')
+        .eq('user_id', affiliate.referred_by)
+        .single();
+
+      if (directReferrer && directReferrer.referred_by) {
+        const indirectCommission = (packageData.finalPrice * packageData.commissionRates.indirect) / 100;
+        
+        await supabase
+          .from('commissions')
+          .insert({
+            affiliate_id: directReferrer.referred_by,
+            referred_user_id: dbUser.id,
+            transaction_id: purchase.id,
+            package_id: packageId,
+            amount: indirectCommission,
+            commission_type: 'indirect',
+            status: 'pending'
+          });
       }
-    });
-
-    // Process commissions for referrers using the commission calculator
-    const { calculateCommissions, createCommissionRecords, getPackageCommissionRates } = await import('@/utils/commissionCalculator');
-    
-    const commissionRates = getPackageCommissionRates(packageData.name);
-    const commissions = await calculateCommissions(
-      purchase.id,
-      dbUser.id,
-      packageData.price,
-      commissionRates
-    );
-
-    if (commissions.length > 0) {
-      await createCommissionRecords(commissions, purchase.id);
     }
 
     return NextResponse.json({
@@ -125,7 +153,5 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

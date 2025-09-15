@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
       razorpay_payment_id,
       razorpay_signature,
       packageType,
+      courseId,
       amount,
       referralCode
     } = await request.json()
@@ -57,20 +58,24 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Check if user already has an affiliate account
-      if (dbUser.affiliate) {
+      // For package purchases, check if user already has an affiliate account
+      if (packageType && dbUser.affiliate) {
         return NextResponse.json(
           { error: 'User already has a package' },
           { status: 400 }
         )
       }
 
+      // Determine transaction type and description
+      const transactionType = packageType ? TransactionType.PACKAGE_PURCHASE : TransactionType.COURSE_PURCHASE
+      const description = packageType ? `${packageType} package purchase` : 'Course purchase'
+      
       // Create transaction record
       const transaction = await tx.transaction.create({
         data: {
           userId: dbUser.id,
           amount: amount / 100, // Convert from paise to rupees
-          type: TransactionType.COURSE_PURCHASE,
+          type: transactionType,
           status: TransactionStatus.SUCCESS,
           paymentId: razorpay_payment_id,
           paymentMethod: 'razorpay',
@@ -79,19 +84,20 @@ export async function POST(request: NextRequest) {
             payment_id: razorpay_payment_id,
             signature: razorpay_signature
           },
-          description: `${packageType} package purchase`,
+          description,
           metadata: {
-            packageType,
+            packageType: packageType || null,
+            courseId: courseId || null,
             referralCode: referralCode || null
           }
         }
       })
 
-      // Find parent affiliate from the provided referral code or stored user data
+      let affiliate = null
       let parentAffiliate = null
       let effectiveReferralCode = referralCode
       
-      // If no referral code provided in payment, check if user has stored referral data
+      // Find parent affiliate from the provided referral code or stored user data
       if (!effectiveReferralCode && dbUser.kycDocuments && 
           typeof dbUser.kycDocuments === 'object' && 
           'temporaryReferralData' in dbUser.kycDocuments) {
@@ -105,26 +111,55 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // Create affiliate account for user
-      const affiliate = await tx.affiliate.create({
-        data: {
-          userId: dbUser.id,
-          referralCode: generateReferralCode(dbUser.name),
-          parentId: parentAffiliate?.id || null,
-          packageType: packageType as PackageType,
-          packagePrice: amount / 100,
-          purchaseDate: new Date()
-        }
-      })
-      
-      // Clear temporary referral data from user record
-      if (dbUser.kycDocuments && 
-          typeof dbUser.kycDocuments === 'object' && 
-          'temporaryReferralData' in dbUser.kycDocuments) {
-        await tx.user.update({
-          where: { id: dbUser.id },
+      // Handle package purchase - create affiliate account
+      if (packageType) {
+        affiliate = await tx.affiliate.create({
           data: {
-            kycDocuments: null // Clear the temporary data
+            userId: dbUser.id,
+            referralCode: generateReferralCode(dbUser.name),
+            parentId: parentAffiliate?.id || null,
+            packageType: packageType as PackageType,
+            packagePrice: amount / 100,
+            purchaseDate: new Date()
+          }
+        })
+        
+        // Clear temporary referral data from user record
+        if (dbUser.kycDocuments && 
+            typeof dbUser.kycDocuments === 'object' && 
+            'temporaryReferralData' in dbUser.kycDocuments) {
+          await tx.user.update({
+            where: { id: dbUser.id },
+            data: {
+              kycDocuments: null // Clear the temporary data
+            }
+          })
+        }
+      }
+
+      // Handle course purchase - create enrollment
+      if (courseId) {
+        // Check if user is already enrolled
+        const existingEnrollment = await tx.enrollment.findUnique({
+          where: {
+            userId_courseId: {
+              userId: dbUser.id,
+              courseId: courseId
+            }
+          }
+        })
+
+        if (existingEnrollment) {
+          throw new Error('User is already enrolled in this course')
+        }
+
+        // Create enrollment
+        await tx.enrollment.create({
+          data: {
+            userId: dbUser.id,
+            courseId: courseId,
+            enrolledAt: new Date(),
+            transactionId: transaction.id
           }
         })
       }
@@ -218,18 +253,32 @@ export async function POST(request: NextRequest) {
       return {
         transaction,
         affiliate,
-        parentAffiliate
+        parentAffiliate,
+        courseId
       }
     })
 
+    const responseMessage = packageType 
+      ? 'Payment verified and account created successfully'
+      : 'Payment verified and course enrollment completed successfully'
+
+    const responseData: any = {
+      transactionId: result.transaction.id,
+      hasReferrer: !!result.parentAffiliate
+    }
+
+    if (result.affiliate) {
+      responseData.affiliateCode = result.affiliate.referralCode
+    }
+
+    if (result.courseId) {
+      responseData.courseId = result.courseId
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Payment verified and account created successfully',
-      data: {
-        transactionId: result.transaction.id,
-        affiliateCode: result.affiliate.referralCode,
-        hasReferrer: !!result.parentAffiliate
-      }
+      message: responseMessage,
+      data: responseData
     })
 
   } catch (error) {

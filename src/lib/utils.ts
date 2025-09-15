@@ -15,10 +15,58 @@ export function formatCurrency(amount: number): string {
 }
 
 export const packagePricing = {
-  SILVER: 12500,
-  GOLD: 25000,
-  PLATINUM: 50000
-} as const
+  SILVER: {
+    base: 2500,
+    gst: 450,
+    final: 2950,
+    commissions: {
+      direct: {
+        silver: 1875,
+        gold: 2375,
+        platinum: 2875
+      },
+      indirect: {
+        silver: 150,
+        gold: 350,
+        platinum: 400
+      }
+    }
+  },
+  GOLD: {
+    base: 4500,
+    gst: 810,
+    final: 5310,
+    commissions: {
+      direct: {
+        silver: 1875,
+        gold: 3375,
+        platinum: 3875
+      },
+      indirect: {
+        silver: 200,
+        gold: 400,
+        platinum: 600
+      }
+    }
+  },
+  PLATINUM: {
+    base: 7500,
+    gst: 1350,
+    final: 8850,
+    commissions: {
+      direct: {
+        silver: 1875,
+        gold: 3375,
+        platinum: 5625
+      },
+      indirect: {
+        silver: 200,
+        gold: 500,
+        platinum: 1000
+      }
+    }
+  }
+} as const;
 
 export type PackageType = keyof typeof packagePricing
 

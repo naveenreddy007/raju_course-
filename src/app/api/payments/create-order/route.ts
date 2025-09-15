@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { createRazorpayOrder } from '@/lib/razorpay'
 import { packagePricing } from '@/lib/utils'
 import { PackageType } from '@/types'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,58 +19,99 @@ export async function POST(request: NextRequest) {
 
     const user = session.user
 
-    const { packageType, referralCode } = await request.json()
+    const { packageType, courseId, amount, referralCode } = await request.json()
 
-    if (!packageType || !Object.values(PackageType).includes(packageType)) {
-      return NextResponse.json(
-        { error: 'Invalid package type' },
-        { status: 400 }
-      )
-    }
+    let orderAmount: number
+    let receipt: string
+    let orderNotes: any
+    let orderType: string
 
-    // Get package pricing
-    const pricing = packagePricing[packageType as PackageType]
-    if (!pricing) {
-      return NextResponse.json(
-        { error: 'Package pricing not found' },
-        { status: 400 }
-      )
-    }
+    if (packageType) {
+      // Package purchase
+      if (!Object.values(PackageType).includes(packageType)) {
+        return NextResponse.json(
+          { error: 'Invalid package type' },
+          { status: 400 }
+        )
+      }
 
-    // Create unique receipt ID
-    const receipt = `pkg_${packageType}_${user.id}_${Date.now()}`
+      // Get package pricing
+      const pricing = packagePricing[packageType as PackageType]
+      if (!pricing) {
+        return NextResponse.json(
+          { error: 'Package pricing not found' },
+          { status: 400 }
+        )
+      }
 
-    // Create Razorpay order
-    const order = await createRazorpayOrder(
-      pricing.final,
-      receipt,
-      {
+      orderAmount = pricing.final
+      receipt = `pkg_${packageType}_${user.id}_${Date.now()}`
+      orderType = 'package'
+      orderNotes = {
         packageType,
         userId: user.id,
         userEmail: user.email || '',
         referralCode: referralCode || '',
         baseAmount: pricing.base.toString(),
         gstAmount: pricing.gst.toString(),
-        finalAmount: pricing.final.toString()
+        finalAmount: pricing.final.toString(),
+        type: 'package'
       }
-    )
+    } else if (courseId) {
+      // Course purchase
+      if (!amount || amount <= 0) {
+        return NextResponse.json(
+          { error: 'Invalid course amount' },
+          { status: 400 }
+        )
+      }
 
-    // Store order details in database (you might want to create an orders table)
-    // For now, we'll return the order details
+      // Verify course exists
+      const course = await prisma.course.findUnique({
+        where: { id: courseId },
+        select: { id: true, title: true, price: true, isPublished: true }
+      })
+
+      if (!course || !course.isPublished) {
+        return NextResponse.json(
+          { error: 'Course not found or not available' },
+          { status: 404 }
+        )
+      }
+
+      orderAmount = amount
+      receipt = `course_${courseId}_${user.id}_${Date.now()}`
+      orderType = 'course'
+      orderNotes = {
+        courseId,
+        courseTitle: course.title,
+        userId: user.id,
+        userEmail: user.email || '',
+        referralCode: referralCode || '',
+        amount: amount.toString(),
+        type: 'course'
+      }
+    } else {
+      return NextResponse.json(
+        { error: 'Either packageType or courseId is required' },
+        { status: 400 }
+      )
+    }
+
+    // Create Razorpay order
+    const order = await createRazorpayOrder(
+      orderAmount,
+      receipt,
+      orderNotes
+    )
 
     return NextResponse.json({
       success: true,
-      order: {
-        id: order.id,
-        amount: order.amount,
-        currency: order.currency,
-        receipt: order.receipt
-      },
-      packageDetails: {
-        type: packageType,
-        pricing,
-        referralCode
-      }
+      id: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      receipt: order.receipt,
+      type: orderType
     })
 
   } catch (error) {
