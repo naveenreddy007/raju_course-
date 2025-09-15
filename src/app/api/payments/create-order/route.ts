@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
         courseTitle: course.title,
         userId: user.id,
         userEmail: user.email || '',
-        referralCode: referralCode || '',
+        referralCode: referralCode || null,
         amount: amount.toString(),
         type: 'course'
       }

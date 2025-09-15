@@ -61,6 +61,7 @@ export default function CoursePurchasePage() {
   const [discount, setDiscount] = useState(0)
   const [finalAmount, setFinalAmount] = useState(0)
   const [gstAmount, setGstAmount] = useState(0)
+  const [referralCodeLoading, setReferralCodeLoading] = useState(false)
 
   useEffect(() => {
     if (!user) {
@@ -115,6 +116,38 @@ export default function CoursePurchasePage() {
     
     setGstAmount(gst)
     setFinalAmount(final)
+  }
+
+  const applyReferralCode = async () => {
+    if (!referralCode) {
+      toast.error('Please enter a referral code.')
+      return
+    }
+    setReferralCodeLoading(true)
+    try {
+      const response = await fetch('/api/referrals/apply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.accessToken}`
+        },
+        body: JSON.stringify({ referralCode, courseId: course?.id })
+      })
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to apply referral code')
+      }
+
+      setDiscount(data.discountPercentage)
+      toast.success(`Referral code applied! You get ${data.discountPercentage}% discount.`)
+    } catch (error) {
+      console.error('Error applying referral code:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to apply referral code.')
+      setDiscount(0) // Reset discount on error
+    } finally {
+      setReferralCodeLoading(false)
+    }
   }
 
   const handlePurchase = async () => {
@@ -313,6 +346,18 @@ export default function CoursePurchasePage() {
                     placeholder="Enter referral code"
                     className="mt-1"
                   />
+                  <Button
+                    onClick={applyReferralCode}
+                    disabled={referralCodeLoading || processing}
+                    className="mt-2 w-full"
+                    variant="secondary"
+                  >
+                    {referralCodeLoading ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      'Apply Referral Code'
+                    )}
+                  </Button>
                 </div>
 
                 <Separator />

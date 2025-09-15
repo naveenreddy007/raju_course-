@@ -198,52 +198,43 @@ export default function HomePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              Join India's fastest-growing affiliate learning platform. Master new skills while building a sustainable income through our innovative two-level commission system.
+              Unlock your earning potential with our comprehensive affiliate program. Learn new skills, refer others, and earn significant commissions.
             </motion.p>
-            
-            <motion.div 
-              className="flex flex-col sm:flex-row gap-4 justify-center"
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
+              className="flex justify-center space-x-4"
             >
-              <Button size="lg" className="text-lg px-8 py-3" asChild>
-                <Link href="/auth/register">
-                  Start Learning Today
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Link>
-              </Button>
-              <Button variant="outline" size="lg" className="text-lg px-8 py-3" asChild>
-                <Link href="/courses">
-                  <PlayCircle className="mr-2 w-5 h-5" />
-                  Explore Courses
-                </Link>
-              </Button>
+              <Link href="/auth/signup">
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full text-lg shadow-lg transform hover:scale-105 transition-all duration-300">
+                  Get Started Today <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </Link>
+              <Link href="/#how-it-works">
+                <Button variant="outline" className="text-blue-600 border-blue-600 hover:bg-blue-50 py-3 px-8 rounded-full text-lg shadow-lg transform hover:scale-105 transition-all duration-300">
+                  Learn More
+                </Button>
+              </Link>
             </motion.div>
           </motion.div>
         </div>
       </section>
 
       {/* Stats Section */}
-      <section className="py-16 bg-white">
+      <section className="py-16 sm:py-24 bg-gray-50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div 
-            className="grid grid-cols-2 md:grid-cols-4 gap-8"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-center"
             variants={staggerChildren}
             initial="initial"
             whileInView="animate"
-            viewport={{ once: true }}
+            viewport={{ once: true, amount: 0.3 }}
           >
             {stats.map((stat, index) => (
-              <motion.div 
-                key={index}
-                variants={fadeInUp}
-                className="text-center"
-              >
-                <div className="text-3xl md:text-4xl font-bold text-primary mb-2">
-                  {stat.number}
-                </div>
-                <div className="text-gray-600">{stat.label}</div>
+              <motion.div key={index} variants={fadeInUp} className="bg-white p-6 rounded-lg shadow-md">
+                <h3 className="text-4xl font-bold text-blue-600 mb-2">{stat.number}</h3>
+                <p className="text-gray-600 text-lg">{stat.label}</p>
               </motion.div>
             ))}
           </motion.div>
@@ -251,399 +242,234 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-gray-50">
+      <section id="how-it-works" className="py-16 sm:py-24">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            className="text-center mb-16"
+          <motion.h2 
+            className="text-3xl sm:text-4xl font-bold text-center text-gray-900 mb-12"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.6 }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Why Choose Our Platform?
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Experience the perfect blend of education and entrepreneurship with our innovative features.
-            </p>
-          </motion.div>
-          
-          <motion.div 
-            className="grid md:grid-cols-2 lg:grid-cols-4 gap-8"
+            How It <span className="text-blue-600">Works</span>
+          </motion.h2>
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
             variants={staggerChildren}
             initial="initial"
             whileInView="animate"
-            viewport={{ once: true }}
+            viewport={{ once: true, amount: 0.3 }}
           >
-            {features.map((feature, index) => {
-              const Icon = feature.icon
-              return (
-                <motion.div key={index} variants={fadeInUp}>
-                  <Card className="h-full hover:shadow-lg transition-shadow">
-                    <CardHeader className="text-center">
-                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                        <Icon className="w-6 h-6 text-primary" />
-                      </div>
-                      <CardTitle className="text-xl">{feature.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription className="text-center">
-                        {feature.description}
-                      </CardDescription>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )
-            })}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Choose Your Learning Package
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Start your journey with any package and unlock earning potential through our commission system.
-            </p>
-          </motion.div>
-          
-          <motion.div 
-            className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto"
-            variants={staggerChildren}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-          >
-            {packages.map((pkg, index) => (
-              <motion.div key={index} variants={fadeInUp}>
-                <Card className={cn(
-                  "relative h-full",
-                  pkg.popular && "border-primary shadow-lg scale-105"
-                )}>
-                  {pkg.popular && (
-                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                      <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium">
-                        Most Popular
-                      </span>
-                    </div>
-                  )}
-                  
-                  <CardHeader className="text-center">
-                    <CardTitle className="text-2xl">{pkg.name}</CardTitle>
-                    <div className="mt-4">
-                      <div className="text-3xl font-bold text-gray-900">
-                        {formatCurrency(pkg.price.final)}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        Base: {formatCurrency(pkg.price.base)} + GST: {formatCurrency(pkg.price.gst)}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent>
-                    <ul className="space-y-3 mb-6">
-                      {pkg.features.map((feature, featureIndex) => (
-                        <li key={featureIndex} className="flex items-start">
-                          <CheckCircle className="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-gray-600">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    
-                    <Button 
-                      className="w-full" 
-                      variant={pkg.popular ? "default" : "outline"}
-                      asChild
-                    >
-                      <Link href={`/auth/register?package=${pkg.type.toLowerCase()}`}>
-                        Get Started
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
+            {features.map((feature, index) => (
+              <motion.div key={index} variants={fadeInUp} className="flex flex-col items-center text-center p-6 bg-white rounded-lg shadow-md">
+                <feature.icon className="w-12 h-12 text-blue-600 mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                <p className="text-gray-600">{feature.description}</p>
               </motion.div>
             ))}
           </motion.div>
         </div>
       </section>
 
-      {/* Referral Commission Section */}
-      <section className="py-20 bg-gray-50">
+      {/* Pricing Section */}
+      <section id="packages" className="py-16 sm:py-24 bg-gray-50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            className="text-center mb-16"
+          <motion.h2 
+            className="text-3xl sm:text-4xl font-bold text-center text-gray-900 mb-12"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.6 }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Two-Level Commission System
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Earn from your direct referrals and their referrals with our sustainable commission model.
-            </p>
-          </motion.div>
-          
-          <div className="max-w-4xl mx-auto">
-            {/* Commission Flow Diagram */}
-            <motion.div 
-              className="bg-white rounded-lg p-8 shadow-lg mb-12"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-            >
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Commission Flow</h3>
-                <div className="flex flex-col items-center space-y-6">
-                  {/* You */}
-                  <div className="bg-blue-100 rounded-lg p-4 text-center">
-                    <div className="text-lg font-semibold text-blue-800">YOU</div>
-                  </div>
-                  
-                  {/* Arrow Down */}
-                  <div className="flex items-center">
-                    <div className="w-px h-8 bg-gray-300"></div>
-                  </div>
-                  
-                  {/* Level 1 - Direct Referrals */}
-                  <div className="flex space-x-8">
-                    <div className="bg-green-100 rounded-lg p-4 text-center">
-                      <div className="text-sm font-semibold text-green-800">Direct Referral 1</div>
-                      <div className="text-xs text-green-600 mt-1">(Direct Commission)</div>
-                    </div>
-                    <div className="bg-green-100 rounded-lg p-4 text-center">
-                      <div className="text-sm font-semibold text-green-800">Direct Referral 2</div>
-                      <div className="text-xs text-green-600 mt-1">(Direct Commission)</div>
-                    </div>
-                  </div>
-                  
-                  {/* Arrows Down */}
-                  <div className="flex space-x-8">
-                    <div className="w-px h-8 bg-gray-300"></div>
-                    <div className="w-px h-8 bg-gray-300"></div>
-                  </div>
-                  
-                  {/* Level 2 - Indirect Referrals */}
-                  <div className="flex space-x-8">
-                    <div className="bg-yellow-100 rounded-lg p-4 text-center">
-                      <div className="text-sm font-semibold text-yellow-800">Referral's Referral</div>
-                      <div className="text-xs text-yellow-600 mt-1">(Indirect Commission)</div>
-                    </div>
-                    <div className="bg-yellow-100 rounded-lg p-4 text-center">
-                      <div className="text-sm font-semibold text-yellow-800">Referral's Referral</div>
-                      <div className="text-xs text-yellow-600 mt-1">(Indirect Commission)</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-            
-            {/* Commission Tables */}
-            <div className="grid md:grid-cols-2 gap-8">
-              {/* Direct Commission */}
-              <motion.div 
-                className="bg-white rounded-lg p-6 shadow-lg"
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
+            Choose Your <span className="text-blue-600">Package</span>
+          </motion.h2>
+          <motion.div
+            className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-5xl mx-auto"
+            variants={staggerChildren}
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true, amount: 0.3 }}
+          >
+            {packages.map((pkg, index) => (
+              <motion.div
+                key={index}
+                variants={fadeInUp}
+                className={cn(
+                  "relative flex flex-col p-8 bg-white rounded-xl shadow-lg border-2 border-transparent transition-all duration-300 hover:border-blue-500",
+                  pkg.popular && "border-blue-600 ring-2 ring-blue-600"
+                )}
               >
-                <h4 className="text-xl font-bold text-gray-900 mb-4 text-center">Direct Commission (Level 1)</h4>
-                <div className="space-y-4">
-                  <div className="border rounded-lg p-4">
-                    <div className="font-semibold text-blue-600 mb-2">Silver User Earnings</div>
-                    <div className="text-sm space-y-1">
-                      <div>Silver Referral → ₹1,875</div>
-                      <div>Gold Referral → ₹2,375</div>
-                      <div>Platinum Referral → ₹2,875</div>
-                    </div>
-                  </div>
-                  <div className="border rounded-lg p-4">
-                    <div className="font-semibold text-yellow-600 mb-2">Gold User Earnings</div>
-                    <div className="text-sm space-y-1">
-                      <div>Silver Referral → ₹1,875</div>
-                      <div>Gold Referral → ₹3,375</div>
-                      <div>Platinum Referral → ₹3,875</div>
-                    </div>
-                  </div>
-                  <div className="border rounded-lg p-4">
-                    <div className="font-semibold text-purple-600 mb-2">Platinum User Earnings</div>
-                    <div className="text-sm space-y-1">
-                      <div>Silver Referral → ₹1,875</div>
-                      <div>Gold Referral → ₹3,375</div>
-                      <div>Platinum Referral → ₹5,625</div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-              
-              {/* Indirect Commission */}
-              <motion.div 
-                className="bg-white rounded-lg p-6 shadow-lg"
-                initial={{ opacity: 0, x: 20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-              >
-                <h4 className="text-xl font-bold text-gray-900 mb-4 text-center">Indirect Commission (Level 2)</h4>
-                <div className="space-y-4">
-                  <div className="border rounded-lg p-4">
-                    <div className="font-semibold text-blue-600 mb-2">Silver User Earnings</div>
-                    <div className="text-sm space-y-1">
-                      <div>Silver → ₹150</div>
-                      <div>Gold → ₹350</div>
-                      <div>Platinum → ₹400</div>
-                    </div>
-                  </div>
-                  <div className="border rounded-lg p-4">
-                    <div className="font-semibold text-yellow-600 mb-2">Gold User Earnings</div>
-                    <div className="text-sm space-y-1">
-                      <div>Silver → ₹200</div>
-                      <div>Gold → ₹400</div>
-                      <div>Platinum → ₹600</div>
-                    </div>
-                  </div>
-                  <div className="border rounded-lg p-4">
-                    <div className="font-semibold text-purple-600 mb-2">Platinum User Earnings</div>
-                    <div className="text-sm space-y-1">
-                      <div>Silver → ₹200</div>
-                      <div>Gold → ₹500</div>
-                      <div>Platinum → ₹1,000</div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-            
-            {/* Referral Link Section for Logged-in Users */}
-            {user && (
-              <motion.div 
-                className="bg-white rounded-lg p-8 shadow-lg mt-12"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-              >
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Your Referral Links</h3>
-                  <p className="text-gray-600">Share these links to start earning commissions</p>
-                </div>
-                
-                {loadingReferral ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  </div>
-                ) : referralData ? (
-                  <div className="space-y-4">
-                    {/* Referral Link */}
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="font-semibold text-gray-700">Referral Link</label>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={copyReferralLink}
-                          className="flex items-center gap-2"
-                        >
-                          <Copy className="w-4 h-4" />
-                          Copy Link
-                        </Button>
-                      </div>
-                      <div className="bg-gray-50 p-3 rounded border text-sm font-mono break-all">
-                        {referralData.referralLink}
-                      </div>
-                    </div>
-                    
-                    {/* Referral Code */}
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="font-semibold text-gray-700">Referral Code</label>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={copyReferralCode}
-                          className="flex items-center gap-2"
-                        >
-                          <Copy className="w-4 h-4" />
-                          Copy Code
-                        </Button>
-                      </div>
-                      <div className="bg-gray-50 p-3 rounded border text-center text-lg font-bold">
-                        {referralData.referralCode}
-                      </div>
-                    </div>
-                    
-                    {/* Quick Actions */}
-                    <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                      <Button className="flex-1" asChild>
-                        <Link href="/dashboard/referrals">
-                          <TrendingUp className="w-4 h-4 mr-2" />
-                          View Referral Dashboard
-                        </Link>
-                      </Button>
-                      <Button variant="outline" className="flex-1" onClick={() => {
-                        if (navigator.share) {
-                          navigator.share({
-                            title: 'Join this amazing learning platform!',
-                            text: 'Start learning and earning with this referral link:',
-                            url: referralData.referralLink
-                          })
-                        } else {
-                          copyReferralLink()
-                        }
-                      }}>
-                        <Share2 className="w-4 h-4 mr-2" />
-                        Share Link
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>Unable to load referral data. Please try refreshing the page.</p>
+                {pkg.popular && (
+                  <div className="absolute top-0 right-0 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-xl">
+                    Most Popular
                   </div>
                 )}
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">{pkg.name}</h3>
+                <p className="text-gray-600 mb-4">Perfect for {pkg.name} affiliates</p>
+                <div className="flex items-baseline mb-5">
+                  <span className="text-5xl font-bold text-gray-900">₹{formatCurrency(pkg.price.final)}</span>
+                  <span className="text-xl font-semibold text-gray-500 ml-2">incl. GST</span>
+                </div>
+                <ul className="space-y-3 text-gray-600 flex-grow mb-8">
+                  {pkg.features.map((feature, i) => (
+                    <li key={i} className="flex items-center">
+                      <CheckCircle className="w-5 h-5 text-green-500 mr-2 flex-shrink-0" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Link href={user ? `/purchase?type=${pkg.type}` : '/auth/signup'} className="mt-auto">
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg text-lg transform hover:scale-105 transition-all duration-300">
+                    {user ? 'Get Started' : 'Sign Up to Purchase'}
+                  </Button>
+                </Link>
               </motion.div>
-            )}
-          </div>
+            ))}
+          </motion.div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-blue-600 to-purple-600">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
-            className="text-center text-white"
+      {/* Referral Section */}
+      {user && referralData && (
+        <section id="referral" className="py-16 sm:py-24 bg-white">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.h2 
+              className="text-3xl sm:text-4xl font-bold text-center text-gray-900 mb-12"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.6 }}
+            >
+              Your <span className="text-blue-600">Referral</span> Dashboard
+            </motion.h2>
+            <motion.div
+              className="max-w-3xl mx-auto bg-gray-50 p-8 rounded-xl shadow-lg"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.3 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <div className="mb-6 text-center">
+                <p className="text-lg text-gray-700 mb-2">Share your unique link and start earning!</p>
+                <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+                  <div className="relative w-full sm:w-auto flex-grow">
+                    <input
+                      type="text"
+                      readOnly
+                      value={referralData.referralLink || 'Generating...'}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg pr-10 text-gray-700 bg-white"
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={copyReferralLink} 
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-600"
+                    >
+                      <Copy className="w-5 h-5" />
+                    </Button>
+                  </div>
+                  <div className="relative w-full sm:w-auto flex-grow">
+                    <input
+                      type="text"
+                      readOnly
+                      value={referralData.referralCode || 'Generating...'}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg pr-10 text-gray-700 bg-white"
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={copyReferralCode} 
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-600"
+                    >
+                      <Copy className="w-5 h-5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
+                <Card className="bg-white shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-md text-gray-600">Total Referrals</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-3xl font-bold text-blue-600">{referralData.totalReferrals || 0}</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-white shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-md text-gray-600">Total Earnings</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-3xl font-bold text-green-600">₹{formatCurrency(referralData.totalEarnings || 0)}</p>
+                  </CardContent>
+                </Card>
+              </div>
+              <div className="mt-8 text-center">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Commission Structure</h3>
+                <div className="flex justify-center items-center space-x-4 text-gray-700">
+                  <div className="flex flex-col items-center">
+                    <span className="font-semibold">Direct:</span>
+                    <span className="text-green-600">15-25%</span>
+                  </div>
+                  <ArrowRight className="w-5 h-5" />
+                  <div className="flex flex-col items-center">
+                    <span className="font-semibold">Indirect:</span>
+                    <span className="text-green-600">1-2%</span>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500 mt-4">Exact percentages depend on the package purchased by your referral.</p>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+      {/* Call to Action Section */}
+      <section className="py-16 sm:py-24 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <motion.h2 
+            className="text-3xl sm:text-4xl font-bold mb-6"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.6 }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Ready to Transform Your Future?
-            </h2>
-            <p className="text-xl mb-8 max-w-2xl mx-auto">
-              Join thousands of learners who are already building their financial freedom through education.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="secondary" className="text-lg px-8 py-3" asChild>
-                <Link href="/auth/register">
-                  <Award className="mr-2 w-5 h-5" />
-                  Start Your Journey
-                </Link>
+            Ready to Start Your Journey?
+          </motion.h2>
+          <motion.p 
+            className="text-xl mb-8 max-w-2xl mx-auto"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            Join thousands of successful affiliates. Sign up today and transform your future!
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+          >
+            <Link href="/auth/signup">
+              <Button className="bg-white text-blue-600 hover:bg-gray-100 font-bold py-3 px-8 rounded-full text-lg shadow-lg transform hover:scale-105 transition-all duration-300">
+                Join Now <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
-              <Button size="lg" variant="outline" className="text-lg px-8 py-3 text-white border-white hover:bg-white hover:text-primary" asChild>
-                <Link href="/about">
-                  Learn More
-                </Link>
-              </Button>
-            </div>
+            </Link>
           </motion.div>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-800 text-white py-8">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p>&copy; {new Date().getFullYear()} Raju. All rights reserved.</p>
+          <div className="flex justify-center space-x-4 mt-4">
+            <Link href="/privacy" className="text-gray-400 hover:text-white">Privacy Policy</Link>
+            <Link href="/terms" className="text-gray-400 hover:text-white">Terms of Service</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
