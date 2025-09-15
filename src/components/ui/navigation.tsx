@@ -16,7 +16,9 @@ import {
   LogIn,
   UserPlus,
   Settings,
-  LogOut
+  LogOut,
+  Share2,
+  Copy
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useMobileDetection } from '@/hooks/useMobileDetection'
@@ -64,6 +66,7 @@ export function TopNavigation() {
   const { user, signOut, loading } = useAuth()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
+  const [referralLink, setReferralLink] = useState<string | null>(null)
   const pathname = usePathname()
 
   const isAuthenticated = !!user
@@ -77,6 +80,40 @@ export function TopNavigation() {
   const handleSignOut = async () => {
     await signOut()
     setActiveDropdown(null)
+  }
+
+  // Fetch referral link for authenticated users
+  React.useEffect(() => {
+    if (user && !loading) {
+      fetchReferralLink()
+    }
+  }, [user, loading])
+
+  const fetchReferralLink = async () => {
+    try {
+      const { authenticatedFetch } = await import('@/lib/auth-utils')
+      const response = await authenticatedFetch('/api/referrals/generate', {
+        method: 'POST'
+      })
+      const data = await response.json()
+      if (data.success && data.data?.referralLink) {
+        setReferralLink(data.data.referralLink)
+      }
+    } catch (error) {
+      console.error('Error fetching referral link:', error)
+    }
+  }
+
+  const copyReferralLink = async () => {
+    if (referralLink) {
+      try {
+        await navigator.clipboard.writeText(referralLink)
+        // You can add a toast notification here if available
+        alert('Referral link copied to clipboard!')
+      } catch (error) {
+        console.error('Failed to copy referral link:', error)
+      }
+    }
   }
 
   return (
@@ -159,53 +196,80 @@ export function TopNavigation() {
             {!isMobile && (
               <div className="hidden md:flex items-center space-x-4">
                 {isAuthenticated ? (
-                  <div className="relative">
-                    <Button
-                      variant="ghost"
-                      className="flex items-center space-x-2"
-                      onClick={() => handleDropdownToggle('user')}
-                    >
-                      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-white" />
-                      </div>
-                      <span>Profile</span>
-                      <ChevronDown className="w-4 h-4" />
-                    </Button>
-                    
-                    <AnimatePresence>
-                      {activeDropdown === 'user' && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -10 }}
-                          className="absolute top-full right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border py-2"
+                  <>
+                    {/* Referral Link Button */}
+                    {referralLink && (
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={copyReferralLink}
+                          className="bg-gradient-to-r from-green-500 to-blue-500 text-white border-0 hover:from-green-600 hover:to-blue-600"
                         >
-                          <Link
-                            href="/dashboard/profile"
-                            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                          >
-                            <User className="w-4 h-4 mr-2" />
-                            Profile
+                          <Share2 className="w-4 h-4 mr-2" />
+                          Share & Earn
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          asChild
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          <Link href="/dashboard/referrals">
+                            View Referrals
                           </Link>
-                          <Link
-                            href="/dashboard/settings"
-                            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        </Button>
+                      </div>
+                    )}
+                    
+                    <div className="relative">
+                      <Button
+                        variant="ghost"
+                        className="flex items-center space-x-2"
+                        onClick={() => handleDropdownToggle('user')}
+                      >
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                          <User className="w-4 h-4 text-white" />
+                        </div>
+                        <span>Profile</span>
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    
+                      <AnimatePresence>
+                        {activeDropdown === 'user' && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="absolute top-full right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border py-2"
                           >
-                            <Settings className="w-4 h-4 mr-2" />
-                            Settings
-                          </Link>
-                          <hr className="my-2" />
-                          <button 
-                            className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                            onClick={handleSignOut}
-                          >
-                            <LogOut className="w-4 h-4 mr-2" />
-                            Logout
-                          </button>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                            <Link
+                              href="/dashboard/profile"
+                              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              <User className="w-4 h-4 mr-2" />
+                              Profile
+                            </Link>
+                            <Link
+                              href="/dashboard/settings"
+                              className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              <Settings className="w-4 h-4 mr-2" />
+                              Settings
+                            </Link>
+                            <hr className="my-2" />
+                            <button 
+                              className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                              onClick={handleSignOut}
+                            >
+                              <LogOut className="w-4 h-4 mr-2" />
+                              Logout
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </>  
                 ) : (
                   <div className="flex items-center space-x-2">
                     <Button variant="ghost" asChild>
@@ -316,6 +380,29 @@ export function TopNavigation() {
                   <div className="pt-4 border-t">
                     {isAuthenticated ? (
                       <div className="space-y-2">
+                        {/* Mobile Referral Section */}
+                        {referralLink && (
+                          <div className="space-y-2 pb-2 border-b">
+                            <button
+                              onClick={() => {
+                                copyReferralLink()
+                                setIsMobileMenuOpen(false)
+                              }}
+                              className="flex items-center w-full py-2 px-3 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg font-medium"
+                            >
+                              <Share2 className="w-4 h-4 mr-2" />
+                              Copy Referral Link
+                            </button>
+                            <Link
+                              href="/dashboard/referrals"
+                              className="block py-2 text-blue-600 font-medium"
+                              onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                              View My Referrals
+                            </Link>
+                          </div>
+                        )}
+                        
                         <Link
                           href="/dashboard/profile"
                           className="block py-2 text-gray-900"

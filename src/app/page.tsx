@@ -135,12 +135,23 @@ export default function HomePage() {
       const response = await authenticatedFetch('/api/referrals/generate', {
         method: 'POST'
       })
+      
+      if (!response.ok) {
+        // Don't throw errors for authentication issues on public pages
+        if (response.status === 401) {
+          console.log('User not authenticated, skipping referral data fetch')
+          return
+        }
+        throw new Error(`HTTP ${response.status}`)
+      }
+      
       const data = await response.json()
       if (data.success) {
-        setReferralData(data.affiliate)
+        setReferralData(data.data)
       }
     } catch (error) {
-      console.error('Error fetching referral data:', error)
+      // Silently handle errors to prevent RSC issues
+      console.log('Referral data fetch skipped:', error.message)
     } finally {
       setLoadingReferral(false)
     }

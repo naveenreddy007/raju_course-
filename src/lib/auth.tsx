@@ -1,37 +1,10 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { User as SupabaseUser } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase'
+import type { User, AuthContextType, LoginCredentials, RegisterData, KYCData, UserRole } from '@/types'
 
-interface User {
-  id: string
-  email: string
-  name?: string
-  phone?: string
-  created_at?: string
-}
-
-interface LoginCredentials {
-  email: string
-  password: string
-}
-
-interface RegisterData {
-  email: string
-  password: string
-  name: string
-  phone?: string
-}
-
-interface AuthContextType {
-  user: User | null
-  loading: boolean
-  signIn: (credentials: LoginCredentials) => Promise<{ error?: string }>
-  signUp: (data: RegisterData) => Promise<{ error?: string; success?: boolean }>
-  signOut: () => Promise<void>
-  refreshUser: () => Promise<void>
-}
+const supabase = createClient()
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -47,13 +20,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email!,
-            name: session.user.user_metadata?.name,
-            phone: session.user.user_metadata?.phone,
-            created_at: session.user.created_at
-          })
+          await fetchUserProfile()
         } else {
           setUser(null)
         }
@@ -68,18 +35,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email!,
-          name: session.user.user_metadata?.name,
-          phone: session.user.user_metadata?.phone,
-          created_at: session.user.created_at
-        })
+        // Fetch complete user profile from database
+        await fetchUserProfile()
       }
     } catch (error) {
       console.error('Error getting session:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchUserProfile = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        setUser(null)
+        return
+      }
+
+      const response = await fetch('/api/user/profile', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (response.ok) {
+        const { data } = await response.json()
+        setUser(data)
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        
+        // If it's an authentication error, use fallback data
+        if (response.status === 401 || errorData.code === 'UNAUTHENTICATED') {
+          if (session?.user) {
+            setUser({
+              id: session.user.id,
+              email: session.user.email!,
+              name: session.user.user_metadata?.name || session.user.email?.split('@')[0],
+              phone: session.user.user_metadata?.phone,
+              created_at: session.user.created_at
+            })
+          }
+        } else {
+          console.error('Profile fetch failed:', response.status, errorData)
+          setUser(null)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error)
     }
   }
 
@@ -142,17 +146,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email!,
-          name: session.user.user_metadata?.name,
-          phone: session.user.user_metadata?.phone,
-          created_at: session.user.created_at
-        })
+        await fetchUserProfile()
       }
     } catch (error) {
       console.error('Error refreshing user:', error)
     }
+  }
+
+  const updateKYC = async (data: KYCData): Promise<{ error?: string }> => {
+    // TODO: Implement KYC update functionality
+    return { error: 'KYC update not implemented yet' }
   }
 
   const value: AuthContextType = {
@@ -161,7 +164,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signUp,
     signOut,
-    refreshUser
+    updateKYC,
+    refreshUser,
+    isAdmin: () => user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN,
+    isSuperAdmin: () => user?.role === UserRole.SUPER_ADMIN
   }
 
   return (

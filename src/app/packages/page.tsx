@@ -80,30 +80,104 @@ export default function PackagesPage() {
         return;
       }
 
-      const response = await fetch('/api/packages/purchase', {
+      // Find the selected package
+      const selectedPackage = packages.find(pkg => pkg.id === packageId);
+      if (!selectedPackage) {
+        toast.error('Package not found');
+        return;
+      }
+
+      // Create Razorpay order
+      const orderResponse = await fetch('/api/payments/create-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          packageId,
-          paymentMethod: 'razorpay' // Default payment method
+          packageType: selectedPackage.name.toLowerCase().replace(' ', '_'),
+          amount: selectedPackage.totalPrice || selectedPackage.price
         })
       });
 
-      const data = await response.json();
+      const orderData = await orderResponse.json();
 
-      if (data.success) {
-        toast.success('Package purchased successfully!');
-        // Redirect to dashboard or success page
-        router.push('/dashboard?tab=packages');
-      } else {
-        toast.error(data.error || 'Failed to purchase package');
+      if (!orderData.success) {
+        toast.error(orderData.error || 'Failed to create payment order');
+        return;
       }
+
+      // Initialize Razorpay payment
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'Affiliate Package',
+        description: `Purchase ${selectedPackage.name} Package`,
+        order_id: orderData.id,
+        handler: async function (response: any) {
+          try {
+            // Verify payment and complete purchase
+            const purchaseResponse = await fetch('/api/packages/purchase', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`
+              },
+              body: JSON.stringify({
+                packageId,
+                paymentDetails: {
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature
+                }
+              })
+            });
+
+            const purchaseData = await purchaseResponse.json();
+
+            if (purchaseData.success) {
+              toast.success('Package purchased successfully!');
+              router.push('/dashboard?tab=packages');
+            } else {
+              toast.error(purchaseData.error || 'Failed to complete purchase');
+            }
+          } catch (error) {
+            console.error('Error completing purchase:', error);
+            toast.error('Failed to complete purchase');
+          }
+        },
+        prefill: {
+          name: user.user_metadata?.full_name || user.email,
+          email: user.email,
+        },
+        theme: {
+          color: '#3B82F6'
+        },
+        modal: {
+          ondismiss: function() {
+            toast.info('Payment cancelled');
+          }
+        }
+      };
+
+      // Load Razorpay script if not already loaded
+      if (typeof window !== 'undefined' && !(window as any).Razorpay) {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => {
+          const rzp = new (window as any).Razorpay(options);
+          rzp.open();
+        };
+        document.body.appendChild(script);
+      } else {
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+      }
+
     } catch (error) {
       console.error('Error purchasing package:', error);
-      toast.error('Failed to purchase package');
+      toast.error('Failed to initiate purchase');
     } finally {
       setPurchasing(null);
     }

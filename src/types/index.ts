@@ -116,7 +116,9 @@ export interface WithdrawalRequest {
 
 // Enums
 export enum UserRole {
-  USER = 'USER'
+  USER = 'USER',
+  ADMIN = 'ADMIN',
+  SUPER_ADMIN = 'SUPER_ADMIN'
 }
 
 export enum WithdrawalStatus {

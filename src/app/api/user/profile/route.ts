@@ -5,7 +5,17 @@ import { requireAuth, AuthError } from '@/lib/api-utils-simple';
 // GET /api/user/profile - Get authenticated user's profile
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAuth(request);
+    // Try to get auth, but don't fail if not authenticated
+    let user;
+    try {
+      user = await requireAuth(request);
+    } catch (authError) {
+      // Return empty response for unauthenticated requests
+      return NextResponse.json(
+        { error: 'Not authenticated', code: 'UNAUTHENTICATED' },
+        { status: 401 }
+      );
+    }
 
     // Get user with related data
     const userProfile = await prisma.user.findUnique({

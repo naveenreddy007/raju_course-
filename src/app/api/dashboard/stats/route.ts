@@ -166,7 +166,7 @@ export async function GET(request: NextRequest) {
       .slice(0, 10);
 
     // Package performance stats
-    const packageStats = allCommissions.reduce((acc, commission) => {
+    const packagePerformance = allCommissions.reduce((acc, commission) => {
       const packageName = commission.transaction?.package?.name || 'Unknown';
       if (!acc[packageName]) {
         acc[packageName] = { count: 0, earnings: 0 };
@@ -176,7 +176,7 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {} as Record<string, { count: number; earnings: number }>);
 
-    const topPerformingPackage = Object.entries(packageStats)
+    const topPerformingPackage = Object.entries(packagePerformance)
       .sort(([,a], [,b]) => b.earnings - a.earnings)[0]?.[0] || null;
 
     const conversionRate = totalReferrals > 0 ? (activeReferrals / totalReferrals) * 100 : 0;

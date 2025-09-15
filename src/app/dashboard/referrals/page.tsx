@@ -60,6 +60,22 @@ export default function ReferralsPage() {
         })
       ])
 
+      if (!statsResponse.ok) {
+        if (statsResponse.status === 401) {
+          toast.error('Please log in to view referral stats')
+          return
+        }
+        throw new Error(`HTTP ${statsResponse.status}`)
+      }
+
+      if (!generateResponse.ok) {
+        if (generateResponse.status === 401) {
+          toast.error('Please log in to generate referral code')
+          return
+        }
+        throw new Error(`HTTP ${generateResponse.status}`)
+      }
+
       const [statsData, generateData] = await Promise.all([
         statsResponse.json(),
         generateResponse.json()

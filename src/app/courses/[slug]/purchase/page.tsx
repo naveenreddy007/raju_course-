@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { useAuth } from '@/hooks/useAuth'
+import { useAuth } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Loader2, CheckCircle, Star, Users, Clock, Award } from 'lucide-react'
 import { toast } from 'sonner'
@@ -80,12 +79,12 @@ export default function CoursePurchasePage() {
 
   const fetchCourse = async () => {
     try {
-      const response = await fetch(`/api/courses/slug/${params.slug}`)
+      const response = await fetch(`/api/courses/${params.slug}`)
       if (!response.ok) {
         throw new Error('Course not found')
       }
       const data = await response.json()
-      setCourse(data)
+      setCourse(data.data)
     } catch (error) {
       console.error('Error fetching course:', error)
       toast.error('Failed to load course details')
@@ -360,7 +359,7 @@ export default function CoursePurchasePage() {
                   </Button>
                 </div>
 
-                <Separator />
+                <hr className="border-gray-200" />
 
                 {/* Pricing */}
                 <div className="space-y-2">
@@ -378,7 +377,7 @@ export default function CoursePurchasePage() {
                     <span>GST (18%)</span>
                     <span>{formatCurrency(gstAmount)}</span>
                   </div>
-                  <Separator />
+                  <hr className="border-gray-200" />
                   <div className="flex justify-between font-semibold text-lg">
                     <span>Total Amount</span>
                     <span>{formatCurrency(finalAmount)}</span>

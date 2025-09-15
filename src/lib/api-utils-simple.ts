@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { NextRequest } from 'next/server'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -22,8 +23,35 @@ export interface AuthResult {
   message?: string
 }
 
+export class AuthError extends Error {
+  statusCode: number
+  
+  constructor(message: string, statusCode: number = 401) {
+    super(message)
+    this.name = 'AuthError'
+    this.statusCode = statusCode
+  }
+}
+
+// Extract token from request and verify user
+export async function requireAuth(request: NextRequest): Promise<User> {
+  const authHeader = request.headers.get('authorization')
+  const token = authHeader?.replace('Bearer ', '') || request.cookies.get('sb-access-token')?.value
+  
+  if (!token) {
+    throw new AuthError('No authentication token provided', 401)
+  }
+  
+  const user = await verifyToken(token)
+  if (!user) {
+    throw new AuthError('Invalid or expired token', 401)
+  }
+  
+  return user
+}
+
 // Verify JWT token and get user
-export async function requireAuth(token: string): Promise<User | null> {
+export async function verifyToken(token: string): Promise<User | null> {
   try {
     if (!token) {
       return null

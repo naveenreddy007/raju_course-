@@ -64,7 +64,7 @@ export default function BlogPage() {
         const response = await fetch('/api/blog/posts')
         if (response.ok) {
           const data = await response.json()
-          const transformedPosts = data.posts?.map((post: any) => ({
+          const transformedPosts = data.data?.posts?.map((post: any) => ({
             id: post.id,
             title: post.title,
             slug: post.slug,
@@ -82,9 +82,15 @@ export default function BlogPage() {
             isPopular: Math.random() > 0.7
           })) || []
           setBlogPosts(transformedPosts)
+        } else {
+          console.log('Blog posts API returned:', response.status)
+          // Set empty array to prevent loading state issues
+          setBlogPosts([])
         }
       } catch (error) {
-        console.error('Error fetching blog posts:', error)
+        console.log('Blog posts fetch skipped:', error.message)
+        // Set empty array to prevent loading state issues
+        setBlogPosts([])
       } finally {
         setLoading(false)
       }

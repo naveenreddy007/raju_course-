@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '@/lib/api-utils-simple';
+import { verifyRazorpaySignature } from '@/lib/razorpay';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,6 +39,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate payment details if provided
+    if (paymentDetails && paymentDetails.razorpay_order_id) {
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = paymentDetails;
+      
+      if (!razorpay_payment_id || !razorpay_signature) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid payment details' },
+          { status: 400 }
+        );
+      }
+
+      // Verify Razorpay signature
+      const isValidSignature = verifyRazorpaySignature(
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature
+      );
+
+      if (!isValidSignature) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid payment signature' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Get the package details
     const { data: packageData, error: packageError } = await supabase
       .from('packages')
@@ -70,6 +97,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the package purchase
+    const purchaseStatus = paymentDetails && paymentDetails.razorpay_payment_id ? 'SUCCESS' : 'PENDING';
+    
     const { data: purchase, error: purchaseError } = await supabase
       .from('package_purchases')
       .insert({
@@ -77,7 +106,7 @@ export async function POST(request: NextRequest) {
         package_id: packageId,
         amount: packageData.finalPrice,
         payment_details: paymentDetails || {},
-        status: 'SUCCESS' // In real implementation, this would be PENDING until payment is verified
+        status: purchaseStatus
       })
       .select()
       .single();
